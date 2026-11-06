@@ -28,14 +28,24 @@ router.post('/', permitirRoles('DIRECTIVO', 'ADMINISTRATIVO'), async (req, res) 
   }
 });
 
-// 2. Listar Salones
+// 2. Listar Salones (Con docentes asignados y total de estudiantes)
 router.get('/', async (req, res) => {
   try {
     const query = `
-      SELECT s.id, s.grado, s.seccion, s.anio_escolar,
-             COUNT(m.estudiante_id) AS total_estudiantes
+      SELECT 
+        s.id, 
+        s.grado, 
+        s.seccion, 
+        s.anio_escolar,
+        COUNT(DISTINCT m.estudiante_id) AS total_estudiantes,
+        COALESCE(
+          STRING_AGG(DISTINCT CONCAT(u.nombres, ' ', u.apellidos), ', '), 
+          'Sin docente asignado'
+        ) AS docentes_asignados
       FROM salones s
       LEFT JOIN matriculas m ON s.id = m.salon_id
+      LEFT JOIN salon_docente sd ON s.id = sd.salon_id
+      LEFT JOIN usuarios u ON sd.docente_id = u.id
       GROUP BY s.id
       ORDER BY s.anio_escolar DESC, s.grado ASC, s.seccion ASC
     `;

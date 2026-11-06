@@ -105,4 +105,63 @@ router.patch('/:id/estado', async (req, res) => {
   }
 });
 
+// 4. Editar datos de un usuario
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { nombres, apellidos, correo, rolNombre } = req.body;
+
+  if (!nombres || !apellidos || !rolNombre) {
+    return res.status(400).json({ mensaje: 'Nombres, apellidos y rol son obligatorios' });
+  }
+
+  try {
+    // Obtener ID del rol
+    const rolResult = await db.query('SELECT id FROM roles WHERE nombre = $1', [rolNombre]);
+    if (rolResult.rows.length === 0) {
+      return res.status(400).json({ mensaje: 'El rol especificado no existe' });
+    }
+    const rolId = rolResult.rows[0].id;
+
+    const query = `
+      UPDATE usuarios
+      SET nombres = $1, apellidos = $2, correo = $3, rol_id = $4
+      WHERE id = $5
+      RETURNING id, dni, nombres, apellidos, correo, activo
+    `;
+    const result = await db.query(query, [nombres, apellidos, correo || null, rolId, id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    res.json({ mensaje: 'Usuario actualizado correctamente', usuario: { ...result.rows[0], rol: rolNombre } });
+  } catch (error) {
+    console.error('Error al actualizar usuario:', error);
+    res.status(500).json({ mensaje: 'Error interno al actualizar usuario' });
+  }
+});
+
+// 5. Eliminar usuario
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+
+  // Evitar eliminar al propio usuario en sesión
+  if (parseInt(id) === req.usuario.id) {
+    return res.status(400).json({ mensaje: 'No puedes eliminar tu propia cuenta en sesión' });
+  }
+
+  try {
+    const result = await db.query('DELETE FROM usuarios WHERE id = $1 RETURNING id', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    res.json({ mensaje: 'Usuario eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar usuario:', error);
+    res.status(500).json({ mensaje: 'No se puede eliminar el usuario porque tiene registros asociados (asistencias, notas, salones)' });
+  }
+});
+
 module.exports = router;
