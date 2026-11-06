@@ -5,6 +5,8 @@ import Login from './pages/Login';
 import Sidebar from './components/Sidebar';
 import UsuariosPage from './pages/UsuariosPage';
 import SalonesPage from './pages/SalonesPage';
+import AsistenciaPage from './pages/AsistenciaPage';
+import NotasPage from './pages/NotasPage';
 
 function MainLayout() {
   const { usuario, logout, cargando } = useAuth();
@@ -54,6 +56,8 @@ function MainLayout() {
           )}
           {tabActiva === 'usuarios' && <UsuariosPage />}
           {tabActiva === 'salones' && <SalonesPage />}
+          {tabActiva === 'asistencia' && <AsistenciaPage />}
+          {tabActiva === 'notas' && <NotasPage />}
         </main>
       </div>
     </div>
