@@ -136,4 +136,27 @@ router.post('/registrar', permitirRoles('DOCENTE', 'DIRECTIVO'), async (req, res
   }
 });
 
+// Consultar el récord de asistencias de un estudiante
+router.get('/estudiante/:estudianteId', async (req, res) => {
+  const { estudianteId } = req.params;
+
+  if (req.usuario.rol === 'ESTUDIANTE' && parseInt(estudianteId) !== req.usuario.id) {
+    return res.status(403).json({ mensaje: 'No tienes permiso para ver asistencias de otro estudiante' });
+  }
+
+  try {
+    const query = `
+      SELECT TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha, estado
+      FROM asistencias
+      WHERE estudiante_id = $1
+      ORDER BY fecha DESC
+    `;
+    const result = await db.query(query, [estudianteId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al obtener asistencias del estudiante:', error);
+    res.status(500).json({ mensaje: 'Error al obtener récord de asistencias' });
+  }
+});
+
 module.exports = router;

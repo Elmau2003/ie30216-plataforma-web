@@ -7,6 +7,7 @@ import UsuariosPage from './pages/UsuariosPage';
 import SalonesPage from './pages/SalonesPage';
 import AsistenciaPage from './pages/AsistenciaPage';
 import NotasPage from './pages/NotasPage';
+import EstudiantePage from './pages/EstudiantePage';
 
 function MainLayout() {
   const { usuario, logout, cargando } = useAuth();
@@ -58,6 +59,7 @@ function MainLayout() {
           {tabActiva === 'salones' && <SalonesPage />}
           {tabActiva === 'asistencia' && <AsistenciaPage />}
           {tabActiva === 'notas' && <NotasPage />}
+          {tabActiva === 'libreta' && <EstudiantePage />}
         </main>
       </div>
     </div>
