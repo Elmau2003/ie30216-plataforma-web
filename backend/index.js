@@ -10,6 +10,7 @@ const userRoutes = require('./routes/userRoutes');
 const classroomRoutes = require('./routes/classroomRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const gradeRoutes = require('./routes/gradeRoutes');
+const communicationRoutes = require('./routes/communicationRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -24,6 +25,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/classrooms', classroomRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/grades', gradeRoutes);
+app.use('/api/communications', communicationRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

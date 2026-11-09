@@ -5,13 +5,13 @@ export default function Sidebar({ rol, tabActiva, setTabActiva }) {
       { id: 'dashboard', nombre: 'Panel Principal' },
       { id: 'usuarios', nombre: 'Gestión de Usuarios' },
       { id: 'salones', nombre: 'Salones y Matrículas' },
-      { id: 'comunicados', nombre: 'Comunicados' },
+      { id: 'comunicados-directivo', nombre: 'Comunicados Oficiales' },
     ],
     DOCENTE: [
       { id: 'dashboard', nombre: 'Panel Principal' },
       { id: 'asistencia', nombre: 'Registro de Asistencia' },
       { id: 'notas', nombre: 'Registro de Calificaciones' },
-      { id: 'comunicados', nombre: 'Comunicados' },
+      { id: 'tramites-docente', nombre: 'Comunicados y Trámites' },
     ],
     ESTUDIANTE: [
       { id: 'dashboard', nombre: 'Panel Principal' },
