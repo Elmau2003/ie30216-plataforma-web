@@ -13,12 +13,14 @@ export default function Sidebar({ rol, tabActiva, setTabActiva }) {
       { id: 'asistencia', nombre: 'Registro de Asistencia' },
       { id: 'notas', nombre: 'Registro de Calificaciones' },
       { id: 'tramites-docente', nombre: 'Comunicados y Trámites' },
+      { id: 'incidencias-docente', nombre: 'Registro de Incidencias' },
     ],
     ESTUDIANTE: [
       { id: 'dashboard', nombre: 'Panel Principal' },
       { id: 'comunicados-estudiante', nombre: 'Comunicados del Aula' },
       { id: 'boleta', nombre: 'Mis Calificaciones' },
       { id: 'asistencia_view', nombre: 'Mi Asistencia' },
+      { id: 'incidencias-estudiante', nombre: 'Mis Incidencias' },
     ],
   };
 
