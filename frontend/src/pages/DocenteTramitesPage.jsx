@@ -5,10 +5,12 @@ import { fetchAPI } from '../services/api';
 export default function DocenteTramitesPage() {
   const [comunicados, setComunicados] = useState([]);
   const [solicitudes, setSolicitudes] = useState([]);
+  const [directivos, setDirectivos] = useState([]);
   const [pestana, setPestana] = useState('comunicados');
 
   // Formulario Solicitud
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [directivoId, setDirectivoId] = useState('');
   const [asunto, setAsunto] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [archivo, setArchivo] = useState(null);
@@ -16,19 +18,25 @@ export default function DocenteTramitesPage() {
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
 
-  const cargarDatos = async () => {
-    try {
-      const [resCom, resSol] = await Promise.all([
-        fetchAPI('/communications/comunicados/mis-comunicados').catch(() => []),
-        fetchAPI('/communications/solicitudes/mis-solicitudes').catch(() => []),
-      ]);
-      setComunicados(Array.isArray(resCom) ? resCom : []);
-      setSolicitudes(Array.isArray(resSol) ? resSol : []);
-    } catch (err) {
-      setMensaje({ tipo: 'error', texto: err.message });
-    }
-  };
+// En frontend/src/pages/DocenteTramitesPage.jsx[cite: 2]
 
+const cargarDatos = async () => {
+  try {
+    const resCom = await fetchAPI('/communications/comunicados/mis-comunicados');
+    const resSol = await fetchAPI('/communications/solicitudes/mis-solicitudes');
+    
+    // Petición directa para auditar la respuesta
+    const resDirectivos = await fetchAPI('/communications/directivos-activos');
+    console.log('Directivos recibidos en el cliente:', resDirectivos);
+
+    setComunicados(Array.isArray(resCom) ? resCom : []);
+    setSolicitudes(Array.isArray(resSol) ? resSol : []);
+    setDirectivos(Array.isArray(resDirectivos) ? resDirectivos : []);
+  } catch (err) {
+    console.error('Error al cargar datos:', err);
+    setMensaje({ tipo: 'error', texto: `Error: ${err.message}` });
+  }
+};
   useEffect(() => {
     cargarDatos();
   }, []);
@@ -38,31 +46,37 @@ export default function DocenteTramitesPage() {
     setGuardando(true);
     setMensaje({ tipo: '', texto: '' });
 
+    if (!directivoId) {
+      setMensaje({ tipo: 'error', texto: 'Debe seleccionar un directivo destinatario.' });
+      setGuardando(false);
+      return;
+    }
+
     try {
       const formData = new FormData();
+      formData.append('directivoId', directivoId);
       formData.append('asunto', asunto);
       formData.append('descripcion', descripcion);
       if (archivo) {
         formData.append('archivo', archivo);
       }
 
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/communications/solicitudes', {
+      // Consumimos fetchAPI que gestiona el puerto, token y envío seguro de FormData
+      await fetchAPI('/communications/solicitudes', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: formData,
       });
 
-      const resData = await response.json();
-      if (!response.ok) throw new Error(resData.mensaje || 'Error al registrar solicitud');
-
       setMensaje({ tipo: 'exito', texto: 'Solicitud enviada correctamente a Dirección.' });
+      
+      // Limpiar formulario y cerrar ventana emergente
+      setDirectivoId('');
       setAsunto('');
       setDescripcion('');
       setArchivo(null);
       setModalAbierto(false);
+      
+      // Recargar datos
       cargarDatos();
     } catch (err) {
       setMensaje({ tipo: 'error', texto: err.message });
@@ -223,6 +237,23 @@ export default function DocenteTramitesPage() {
           <div className="bg-white rounded-xl p-6 w-full max-w-lg shadow-xl border border-slate-200 space-y-4">
             <h3 className="text-lg font-bold text-slate-800">Presentar Solicitud / Trámite</h3>
             <form onSubmit={handleEnviarSolicitud} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Directivo Destinatario</label>
+                <select
+                    value={directivoId}
+                    onChange={(e) => setDirectivoId(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 bg-white"
+                >
+                    <option value="">-- Seleccionar Directivo Activo --</option>
+                    {directivos.map((d) => (
+                    <option key={d.id} value={d.id}>
+                        {d.apellidos}, {d.nombres} {d.dni ? `(DNI: ${d.dni})` : ''}
+                    </option>
+                    ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">Asunto de la Solicitud</label>
                 <input

@@ -121,6 +121,7 @@ router.post('/solicitudes', permitirRoles('DOCENTE'), upload.single('archivo'), 
   let archivoUrl = null;
 
   try {
+    // Solo sube a Supabase si req.file efectivamente existe
     if (req.file) {
       archivoUrl = await subirArchivoSupabase(req.file, 'solicitudes');
     }
@@ -131,10 +132,12 @@ router.post('/solicitudes', permitirRoles('DOCENTE'), upload.single('archivo'), 
       RETURNING *
     `;
     const result = await db.query(query, [docenteId, asunto, descripcion, archivoUrl]);
-    res.status(201).json({ mensaje: 'Solicitud enviada correctamente', solicitud: result.rows[0] });
+    
+    // Garantizar respuesta JSON explícita
+    return res.status(201).json({ mensaje: 'Solicitud enviada correctamente', solicitud: result.rows[0] });
   } catch (error) {
     console.error('Error al enviar solicitud:', error);
-    res.status(500).json({ mensaje: 'Error interno al registrar la solicitud' });
+    return res.status(500).json({ mensaje: 'Error interno al registrar la solicitud' });
   }
 });
 
@@ -199,5 +202,72 @@ router.put('/solicitudes/:id/responder', permitirRoles('DIRECTIVO'), async (req,
     res.status(500).json({ mensaje: 'Error interno al procesar la solicitud' });
   }
 });
+
+// Listar directivos activos destinatarios (rol_id = 1, excluyendo al admin DNI '00000000')
+router.get('/directivos-activos', async (req, res) => {
+  try {
+    const query = `
+      SELECT id, nombres, apellidos, dni 
+      FROM usuarios 
+      WHERE rol_id = 1 
+        AND dni != '00000000'
+        AND activo = TRUE
+      ORDER BY apellidos ASC
+    `;
+    const result = await db.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al obtener directivos activos:', error);
+    res.status(500).json({ mensaje: 'Error al obtener la lista de directivos' });
+  }
+});
+
+// 6. Listar todas las solicitudes recibidas por Directivos (DIRECTIVO)
+router.get('/solicitudes/todas', permitirRoles('DIRECTIVO'), async (req, res) => {
+  try {
+    const query = `
+      SELECT s.id, s.asunto, s.descripcion, s.estado, s.respuesta_directivo, s.archivo_url,
+             TO_CHAR(s.fecha_envio, 'DD/MM/YYYY HH24:MI') AS fecha,
+             CONCAT(u.nombres, ' ', u.apellidos) AS docente, u.dni AS docente_dni
+      FROM solicitudes s
+      JOIN usuarios u ON s.docente_id = u.id
+      ORDER BY s.fecha_envio DESC
+    `;
+    const result = await db.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al consultar solicitudes para directivo:', error);
+    res.status(500).json({ mensaje: 'Error al listar solicitudes' });
+  }
+});
+
+// 7. Atender / Responder una solicitud (DIRECTIVO)
+router.put('/solicitudes/:id/responder', permitirRoles('DIRECTIVO'), async (req, res) => {
+  const { id } = req.params;
+  const { estado, respuestaDirectivo } = req.body;
+
+  if (!['ATENDIDO', 'RECHAZADO'].includes(estado)) {
+    return res.status(400).json({ mensaje: 'Estado inválido' });
+  }
+
+  try {
+    const query = `
+      UPDATE solicitudes
+      SET estado = $1, respuesta_directivo = $2
+      WHERE id = $3
+      RETURNING *
+    `;
+    const result = await db.query(query, [estado, respuestaDirectivo || '', id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ mensaje: 'Solicitud no encontrada' });
+    }
+
+    res.json({ mensaje: 'Solicitud actualizada correctamente', solicitud: result.rows[0] });
+  } catch (error) {
+    console.error('Error al responder solicitud:', error);
+    res.status(500).json({ mensaje: 'Error interno al procesar la solicitud' });
+  }
+}); 
 
 module.exports = router;

@@ -6,6 +6,7 @@ export default function Sidebar({ rol, tabActiva, setTabActiva }) {
       { id: 'usuarios', nombre: 'Gestión de Usuarios' },
       { id: 'salones', nombre: 'Salones y Matrículas' },
       { id: 'comunicados-directivo', nombre: 'Comunicados Oficiales' },
+      { id: 'solicitudes-directivo', nombre: 'Solicitudes Recibidas' },
     ],
     DOCENTE: [
       { id: 'dashboard', nombre: 'Panel Principal' },

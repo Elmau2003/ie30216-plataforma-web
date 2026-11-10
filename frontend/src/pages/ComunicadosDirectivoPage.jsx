@@ -67,17 +67,11 @@ export default function ComunicadosDirectivoPage() {
         formData.append('archivo', archivo);
       }
 
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/communications/comunicados', {
+      // Usamos fetchAPI que ahora maneja automáticamente FormData y el token
+      await fetchAPI('/communications/comunicados', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: formData,
       });
-
-      const resData = await response.json();
-      if (!response.ok) throw new Error(resData.mensaje || 'Error al emitir comunicado');
 
       setMensaje({ tipo: 'exito', texto: 'Comunicado emitido correctamente.' });
       setAsunto('');

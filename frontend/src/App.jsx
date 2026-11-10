@@ -10,6 +10,7 @@ import NotasPage from './pages/NotasPage';
 import EstudiantePage from './pages/EstudiantePage';
 import ComunicadosDirectivoPage from './pages/ComunicadosDirectivoPage';
 import DocenteTramitesPage from './pages/DocenteTramitesPage';
+import DirectivoSolicitudesPage from './pages/DirectivoSolicitudesPage';
 
 function MainLayout() {
   const { usuario, logout, cargando } = useAuth();
@@ -63,6 +64,7 @@ function MainLayout() {
           {tabActiva === 'notas' && <NotasPage />}
           {tabActiva === 'libreta' && <EstudiantePage />}
           {tabActiva === 'comunicados-directivo' && <ComunicadosDirectivoPage />}
+          {tabActiva === 'solicitudes-directivo' && <DirectivoSolicitudesPage />}
           {tabActiva === 'tramites-docente' && <DocenteTramitesPage />}
         </main>
       </div>
