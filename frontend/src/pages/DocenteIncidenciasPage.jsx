@@ -21,12 +21,20 @@ export default function DocenteIncidenciasPage() {
   const cargarDatosIniciales = async () => {
     setCargando(true);
     try {
-      const [resSalones, resReportes] = await Promise.all([
-        fetchAPI('/communications/salones-disponibles').catch(() => []),
+      const [resMiSalon, resReportes] = await Promise.all([
+        fetchAPI('/classrooms/mi-salon-asignado').catch(() => ({ asignado: false })),
         fetchAPI('/incidents/docente/mis-reportes').catch(() => []),
       ]);
 
-      setSalones(Array.isArray(resSalones) ? resSalones : []);
+      if (resMiSalon.asignado) {
+        setSalones([resMiSalon.salon]);
+        setSalonSeleccionado(resMiSalon.salon.id.toString());
+        // Cargar inmediatamente la lista de alumnos del salón asignado
+        handleSalonChange(resMiSalon.salon.id.toString());
+      } else {
+        setSalones([]);
+      }
+
       setReportes(Array.isArray(resReportes) ? resReportes : []);
     } catch (err) {
       setMensaje({ tipo: 'error', texto: err.message });
@@ -39,7 +47,6 @@ export default function DocenteIncidenciasPage() {
     cargarDatosIniciales();
   }, []);
 
-  // Cargar estudiantes dinámicamente cuando el docente selecciona un salón
   const handleSalonChange = async (sId) => {
     setSalonSeleccionado(sId);
     setEstudianteId('');
@@ -78,7 +85,6 @@ export default function DocenteIncidenciasPage() {
       });
 
       setMensaje({ tipo: 'exito', texto: 'Incidencia registrada correctamente.' });
-      setSalonSeleccionado('');
       setEstudianteId('');
       setTipoIncidencia('Indisciplina');
       setDescripcion('');
@@ -177,19 +183,23 @@ export default function DocenteIncidenciasPage() {
             <h3 className="text-lg font-bold text-slate-800">Nueva Incidencia Conductual</h3>
             <form onSubmit={handleRegistrarIncidencia} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">1. Seleccionar Salón</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">1. Salón Asignado (Año Lectivo)</label>
                 <select
                   value={salonSeleccionado}
                   onChange={(e) => handleSalonChange(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                  disabled={salones.length === 1}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100 font-medium"
                 >
-                  <option value="">-- Seleccionar Salón --</option>
-                  {salones.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.grado}° "{s.seccion}"
-                    </option>
-                  ))}
+                  {salones.length === 0 ? (
+                    <option value="">-- No tiene salón asignado este año --</option>
+                  ) : (
+                    salones.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.grado}° "{s.seccion}" ({s.anio_escolar || new Date().getFullYear()})
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -202,7 +212,7 @@ export default function DocenteIncidenciasPage() {
                   disabled={!salonSeleccionado}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100"
                 >
-                  <option value="">-- {salonSeleccionado ? 'Seleccionar Estudiante' : 'Primero elija un salón'} --</option>
+                  <option value="">-- {salonSeleccionado ? 'Seleccionar Estudiante' : 'Sin salón asignado'} --</option>
                   {estudiantes.map((est) => (
                     <option key={est.id} value={est.id}>
                       {est.apellidos}, {est.nombres} (DNI: {est.dni})
@@ -248,7 +258,7 @@ export default function DocenteIncidenciasPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={guardando}
+                  disabled={guardando || salones.length === 0}
                   className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium disabled:opacity-50"
                 >
                   {guardando ? 'Guardando...' : 'Guardar Reporte'}

@@ -1,13 +1,16 @@
 // frontend/src/pages/NotasPage.jsx
 import { useState, useEffect } from 'react';
 import { fetchAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import * as XLSX from 'xlsx';
 
 export default function NotasPage() {
+  const { usuario } = useAuth();
   const [salones, setSalones] = useState([]);
   const [salonId, setSalonId] = useState('');
   const [evaluaciones, setEvaluaciones] = useState([]);
   const [cursoFiltro, setCursoFiltro] = useState('TODOS');
+  const [periodoFiltro, setPeriodoFiltro] = useState('TODOS');
   
   // Modales
   const [modalCrearAbierto, setModalCrearAbierto] = useState(false);
@@ -17,6 +20,7 @@ export default function NotasPage() {
   const [curso, setCurso] = useState('Matemática');
   const [titulo, setTitulo] = useState('');
   const [fechaEval, setFechaEval] = useState(new Date().toISOString().split('T')[0]);
+  const [periodo, setPeriodo] = useState('I Bimestre');
 
   // Estado Formulario Calificar (Modal)
   const [estudiantes, setEstudiantes] = useState([]);
@@ -39,24 +43,36 @@ export default function NotasPage() {
     'Inglés',
   ];
 
+  const bimestres = ['I Bimestre', 'II Bimestre', 'III Bimestre', 'IV Bimestre'];
+
   useEffect(() => {
-    const cargarSalones = async () => {
+    const cargarSalonesSegunRol = async () => {
       try {
-        const data = await fetchAPI('/classrooms');
-        setSalones(data);
-        if (data.length > 0) setSalonId(data[0].id.toString());
+        if (usuario.rol === 'DOCENTE') {
+          const data = await fetchAPI('/classrooms/mi-salon-asignado');
+          if (data.asignado) {
+            setSalones([data.salon]);
+            setSalonId(data.salon.id.toString());
+          } else {
+            setMensaje({ tipo: 'error', texto: 'No tiene un salón asignado para este año escolar.' });
+          }
+        } else {
+          const data = await fetchAPI('/classrooms');
+          setSalones(data);
+          if (data.length > 0) setSalonId(data[0].id.toString());
+        }
       } catch (err) {
         setMensaje({ tipo: 'error', texto: err.message });
       }
     };
-    cargarSalones();
-  }, []);
+    if (usuario?.rol) cargarSalonesSegunRol();
+  }, [usuario]);
 
   const cargarEvaluaciones = async () => {
     if (!salonId) return;
     setCargando(true);
     try {
-      const data = await fetchAPI(`/grades/evaluaciones/salon/${salonId}`);
+      const data = await fetchAPI(`/grades/evaluaciones/salon/${salonId}?periodo=${periodoFiltro}`);
       setEvaluaciones(data);
     } catch (err) {
       setMensaje({ tipo: 'error', texto: err.message });
@@ -67,13 +83,12 @@ export default function NotasPage() {
 
   useEffect(() => {
     cargarEvaluaciones();
-  }, [salonId]);
+  }, [salonId, periodoFiltro]);
 
   const evaluacionesFiltradas = evaluaciones.filter(
     (ev) => cursoFiltro === 'TODOS' || ev.curso === cursoFiltro
   );
 
-  // Exportar Registro Oficial de Notas por Curso a Excel
   const handleExportarExcelNotas = async () => {
     if (!salonId || cursoFiltro === 'TODOS') {
       setMensaje({ tipo: 'error', texto: 'Seleccione un curso específico para exportar el registro de notas.' });
@@ -85,7 +100,7 @@ export default function NotasPage() {
 
     try {
       const { evaluaciones: evList, registros } = await fetchAPI(
-        `/grades/reporte-curso/${salonId}?curso=${cursoFiltro}`
+        `/grades/reporte-curso/${salonId}?curso=${cursoFiltro}&periodo=${periodoFiltro}`
       );
 
       if (evList.length === 0) {
@@ -119,7 +134,7 @@ export default function NotasPage() {
         };
 
         evList.forEach((ev) => {
-          const nombreColumna = `${ev.titulo} (${ev.fecha_fmt})`;
+          const nombreColumna = `${ev.titulo} [${ev.periodo}] (${ev.fecha_fmt})`;
           fila[nombreColumna] = est.notas[ev.id] || '-';
         });
 
@@ -133,13 +148,6 @@ export default function NotasPage() {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, `Notas ${cursoFiltro}`);
 
-      worksheet['!cols'] = [
-        { wch: 10 },
-        { wch: 12 },
-        { wch: 32 },
-        ...evList.map(() => ({ wch: 22 })),
-      ];
-
       XLSX.writeFile(workbook, `Registro_Notas_${cursoFiltro}_${nombreSalon}.xlsx`);
       setMensaje({ tipo: 'exito', texto: `Registro de ${cursoFiltro} exportado en Excel correctamente.` });
     } catch (err) {
@@ -149,10 +157,9 @@ export default function NotasPage() {
     }
   };
 
-  // Guardar nueva evaluación desde Modal
   const handleCrearEvaluacion = async (e) => {
     e.preventDefault();
-    if (!salonId || !curso || !titulo || !fechaEval) return;
+    if (!salonId || !curso || !titulo || !fechaEval || !periodo) return;
 
     setGuardando(true);
     try {
@@ -163,6 +170,7 @@ export default function NotasPage() {
           curso,
           titulo,
           fecha: fechaEval,
+          periodo,
         }),
       });
 
@@ -177,7 +185,6 @@ export default function NotasPage() {
     }
   };
 
-  // Abrir modal para calificar y obtener notas previas
   const abrirModalCalificar = async (evaluacion) => {
     setEvaluacionCalificar(evaluacion);
     setCargando(true);
@@ -187,7 +194,6 @@ export default function NotasPage() {
       const listaOrdenada = resEst.sort((a, b) => a.apellidos.localeCompare(b.apellidos));
       setEstudiantes(listaOrdenada);
 
-      // Obtener notas guardadas previamente para esta evaluación
       let notasExistentes = [];
       try {
         notasExistentes = await fetchAPI(`/grades/evaluacion/${evaluacion.id}`);
@@ -198,7 +204,7 @@ export default function NotasPage() {
       const mapaNotasExistentes = {};
       const mapaObsExistentes = {};
       notasExistentes.forEach((n) => {
-        mapaNotasExistentes[n.estudiante_id] = n.calificacion_letra; // puede ser AD, A, B, C o null
+        mapaNotasExistentes[n.estudiante_id] = n.calificacion_letra;
         mapaObsExistentes[n.estudiante_id] = n.observaciones || '';
       });
 
@@ -218,7 +224,6 @@ export default function NotasPage() {
     }
   };
 
-  // Lógica de toggle: al presionar la misma nota elegida, se desmarca a null
   const toggleNota = (estudianteId, letra) => {
     setNotasMap((prev) => ({
       ...prev,
@@ -226,7 +231,6 @@ export default function NotasPage() {
     }));
   };
 
-  // Guardar notas desde Modal
   const handleGuardarNotas = async (e) => {
     e.preventDefault();
     if (!evaluacionCalificar) return;
@@ -257,26 +261,26 @@ export default function NotasPage() {
 
   return (
     <div className="space-y-6">
-      {/* Cabecera Principal */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Evaluaciones y Notas CNEB</h2>
-          <p className="text-xs text-slate-500">Gestione los criterios de evaluación por curso y salón</p>
+          <p className="text-xs text-slate-500">Gestione los criterios de evaluación por bimestre y salón</p>
         </div>
 
         <div className="flex gap-2">
           <button
             onClick={handleExportarExcelNotas}
             disabled={exportando || cursoFiltro === 'TODOS'}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg text-sm shadow-xs transition flex items-center gap-2 disabled:opacity-50"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg text-sm shadow-xs transition disabled:opacity-50"
           >
             {exportando ? 'Exportando...' : 'Exportar Registro (.xlsx)'}
           </button>
           <button
             onClick={() => setModalCrearAbierto(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-2 rounded-lg text-sm shadow-xs transition flex items-center gap-2"
+            disabled={salones.length === 0}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-2 rounded-lg text-sm shadow-xs transition disabled:opacity-50"
           >
-            <span>+</span> Nueva Evaluación
+            + Nueva Evaluación
           </button>
         </div>
       </div>
@@ -293,19 +297,34 @@ export default function NotasPage() {
         </div>
       )}
 
-      {/* Barra de Filtros: Salón y Curso */}
+      {/* Barra de Filtros */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center gap-6">
         <div className="flex items-center gap-3">
           <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">Salón:</label>
           <select
             value={salonId}
             onChange={(e) => setSalonId(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white"
+            disabled={usuario?.rol === 'DOCENTE'}
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 disabled:bg-slate-100 font-medium"
           >
             {salones.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.grado} "{s.seccion}" ({s.anio_escolar})
+                {s.grado} "{s.seccion}" ({s.anio_escolar || new Date().getFullYear()})
               </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">Bimestre:</label>
+          <select
+            value={periodoFiltro}
+            onChange={(e) => setPeriodoFiltro(e.target.value)}
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-blue-50/50 text-blue-900 font-medium"
+          >
+            <option value="TODOS">-- Todos los Bimestres --</option>
+            {bimestres.map((b) => (
+              <option key={b} value={b}>{b}</option>
             ))}
           </select>
         </div>
@@ -325,14 +344,12 @@ export default function NotasPage() {
         </div>
       </div>
 
-      {/* Grid de Tarjetas Filtradas */}
+      {/* Grid de Tarjetas */}
       {cargando && !evaluacionCalificar ? (
         <div className="p-8 text-center text-slate-400">Cargando evaluaciones...</div>
       ) : evaluacionesFiltradas.length === 0 ? (
         <div className="bg-white p-12 text-center rounded-xl border border-slate-200 text-slate-400">
-          {cursoFiltro === 'TODOS'
-            ? 'No hay evaluaciones registradas en este salón.'
-            : `No hay evaluaciones registradas para el curso de ${cursoFiltro}.`}
+          No se encontraron evaluaciones registradas con los filtros seleccionados.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -342,13 +359,16 @@ export default function NotasPage() {
               className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-purple-300 transition"
             >
               <div className="space-y-2">
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start gap-2">
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
                     {ev.curso}
                   </span>
-                  <span className="text-xs font-mono text-slate-400">{ev.fecha}</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                    {ev.periodo}
+                  </span>
                 </div>
                 <h3 className="font-bold text-slate-800 text-base leading-snug">{ev.titulo}</h3>
+                <p className="text-xs text-slate-400 font-mono">Fecha: {ev.fecha}</p>
                 <p className="text-xs text-slate-500">Docente: {ev.docente}</p>
               </div>
 
@@ -372,6 +392,19 @@ export default function NotasPage() {
             <h3 className="text-lg font-bold text-slate-800 mb-4">Nueva Evaluación</h3>
             <form onSubmit={handleCrearEvaluacion} className="space-y-4">
               <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Período / Bimestre</label>
+                <select
+                  value={periodo}
+                  onChange={(e) => setPeriodo(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-blue-50/40 text-blue-900 font-semibold"
+                >
+                  {bimestres.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">Área Curricular / Curso</label>
                 <select
                   value={curso}
@@ -390,7 +423,7 @@ export default function NotasPage() {
                   type="text"
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
-                  placeholder="Ej: Práctica de Comprensión Lectora"
+                  placeholder="Ej: Examen Bimestral de Comprensión"
                   required
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                 />
@@ -433,9 +466,14 @@ export default function NotasPage() {
           <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl border border-slate-200 my-8 flex flex-col max-h-[90vh]">
             <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-xl">
               <div>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
-                  {evaluacionCalificar.curso}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
+                    {evaluacionCalificar.curso}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                    {evaluacionCalificar.periodo}
+                  </span>
+                </div>
                 <h3 className="text-lg font-bold text-slate-800 mt-1">{evaluacionCalificar.titulo}</h3>
                 <p className="text-xs text-slate-500">Fecha: {evaluacionCalificar.fecha}</p>
               </div>

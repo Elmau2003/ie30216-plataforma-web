@@ -7,16 +7,36 @@ export default function EstudiantePage() {
   const { usuario } = useAuth();
   const [libreta, setLibreta] = useState([]);
   const [asistencias, setAsistencias] = useState([]);
+  const [aniosHistorial, setAniosHistorial] = useState([]);
+  const [anioSeleccionado, setAnioSeleccionado] = useState(new Date().getFullYear());
+  const [bimestreFiltro, setBimestreFiltro] = useState('TODOS');
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
 
+  const bimestres = ['I Bimestre', 'II Bimestre', 'III Bimestre', 'IV Bimestre'];
+
   useEffect(() => {
-    const cargarDatosEstudiante = async () => {
+    const cargarAnios = async () => {
+      try {
+        const data = await fetchAPI(`/grades/estudiante/${usuario.id}/anios-historial`);
+        setAniosHistorial(data);
+        if (data.length > 0) {
+          setAnioSeleccionado(data[0].anio_escolar);
+        }
+      } catch (err) {
+        console.error('Error al cargar historial de años:', err);
+      }
+    };
+    if (usuario?.id) cargarAnios();
+  }, [usuario]);
+
+  useEffect(() => {
+    const cargarDatosAnio = async () => {
       try {
         setCargando(true);
         const [resNotas, resAsistencia] = await Promise.all([
-          fetchAPI(`/grades/estudiante/${usuario.id}`),
-          fetchAPI(`/attendance/estudiante/${usuario.id}`).catch(() => []),
+          fetchAPI(`/grades/estudiante/${usuario.id}?anio=${anioSeleccionado}`),
+          fetchAPI(`/attendance/estudiante/${usuario.id}?anio=${anioSeleccionado}`).catch(() => []),
         ]);
         setLibreta(resNotas);
         setAsistencias(resAsistencia);
@@ -27,19 +47,23 @@ export default function EstudiantePage() {
       }
     };
 
-    if (usuario?.id) {
-      cargarDatosEstudiante();
+    if (usuario?.id && anioSeleccionado) {
+      cargarDatosAnio();
     }
-  }, [usuario]);
+  }, [usuario, anioSeleccionado]);
 
-  // Agrupar calificaciones por Área Curricular / Curso
-  const libretaPorCurso = libreta.reduce((acc, curr) => {
+  // Filtrar calificaciones por el bimestre seleccionado
+  const libretaFiltrada = libreta.filter(
+    (item) => bimestreFiltro === 'TODOS' || item.periodo === bimestreFiltro
+  );
+
+  // Agrupar calificaciones filtradas por Área Curricular
+  const libretaPorCurso = libretaFiltrada.reduce((acc, curr) => {
     if (!acc[curr.curso]) acc[curr.curso] = [];
     acc[curr.curso].push(curr);
     return acc;
   }, {});
 
-  // Totales de Asistencia
   const totalClases = asistencias.length;
   const presentes = asistencias.filter((a) => a.estado === 'PRESENTE').length;
   const faltas = asistencias.filter((a) => a.estado === 'FALTA').length;
@@ -50,15 +74,50 @@ export default function EstudiantePage() {
     ? Math.round(((presentes + tardanzas) / totalClases) * 100)
     : 100;
 
-  if (cargando) {
-    return <div className="p-8 text-center text-slate-400">Cargando libreta de notas...</div>;
-  }
-
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-slate-800">Mi Libreta y Récord Escolar</h2>
-        <p className="text-xs text-slate-500">I.E. 30216 Sagrado Corazón de María</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Mi Libreta y Récord Escolar</h2>
+          <p className="text-xs text-slate-500">I.E. 30216 Sagrado Corazón de María</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Selector de Bimestre */}
+          <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs">
+            <label className="text-xs font-semibold text-slate-600">Bimestre:</label>
+            <select
+              value={bimestreFiltro}
+              onChange={(e) => setBimestreFiltro(e.target.value)}
+              className="text-xs font-bold text-purple-700 bg-transparent border-0 focus:outline-none"
+            >
+              <option value="TODOS">-- Todos --</option>
+              {bimestres.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Selector de Año Escolar */}
+          <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs">
+            <label className="text-xs font-semibold text-slate-600">Año Lectivo:</label>
+            <select
+              value={anioSeleccionado}
+              onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
+              className="text-xs font-bold text-blue-700 bg-transparent border-0 focus:outline-none"
+            >
+              {aniosHistorial.length === 0 ? (
+                <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
+              ) : (
+                aniosHistorial.map((h) => (
+                  <option key={h.anio_escolar} value={h.anio_escolar}>
+                    {h.anio_escolar} ({h.grado}° "{h.seccion}")
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -93,11 +152,17 @@ export default function EstudiantePage() {
 
       {/* Libreta de Notas CNEB agrupada por Área Curricular */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-slate-800">Calificaciones CNEB por Área Curricular</h3>
+        <h3 className="text-lg font-bold text-slate-800">
+          Calificaciones CNEB {bimestreFiltro !== 'TODOS' ? `- ${bimestreFiltro}` : ''} ({anioSeleccionado})
+        </h3>
 
-        {Object.keys(libretaPorCurso).length === 0 ? (
+        {cargando ? (
           <div className="bg-white p-8 text-center rounded-xl border border-slate-200 text-slate-400">
-            Aún no tienes notas registradas en este período escolar.
+            Cargando expediente del año {anioSeleccionado}...
+          </div>
+        ) : Object.keys(libretaPorCurso).length === 0 ? (
+          <div className="bg-white p-8 text-center rounded-xl border border-slate-200 text-slate-400">
+            No se encontraron calificaciones registradas en el período seleccionado.
           </div>
         ) : (
           Object.entries(libretaPorCurso).map(([nombreCurso, evaluacionesList]) => (
@@ -111,6 +176,7 @@ export default function EstudiantePage() {
               <table className="w-full text-left text-sm text-slate-600">
                 <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
                   <tr>
+                    <th className="p-3">Bimestre</th>
                     <th className="p-3">Evaluación</th>
                     <th className="p-3">Fecha</th>
                     <th className="p-3 text-center">Nivel de Logro</th>
@@ -120,6 +186,7 @@ export default function EstudiantePage() {
                 <tbody className="divide-y divide-slate-100">
                   {evaluacionesList.map((item, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
+                      <td className="p-3 font-semibold text-xs text-blue-800">{item.periodo}</td>
                       <td className="p-3 font-medium text-slate-800">{item.evaluacion}</td>
                       <td className="p-3 font-mono text-xs text-slate-400">{item.fecha}</td>
                       <td className="p-3 text-center">

@@ -6,22 +6,42 @@ const { verificarToken, permitirRoles } = require('../middlewares/authMiddleware
 
 router.use(verificarToken);
 
-// 1. Registrar una nueva incidencia (DOCENTE)
+// 1. Registrar una nueva incidencia (DOCENTE - Solo año lectivo actual)
 router.post('/', permitirRoles('DOCENTE'), async (req, res) => {
   const { estudianteId, salonId, tipo, descripcion } = req.body;
   const docenteId = req.usuario.id;
+  const anioActual = new Date().getFullYear();
 
   if (!estudianteId || !tipo || !descripcion) {
     return res.status(400).json({ mensaje: 'Estudiante, tipo de incidencia y descripción son requeridos' });
   }
 
   try {
+    const sId = (salonId && salonId !== '' && salonId !== 'null') ? parseInt(salonId) : null;
+
+    // VALIDACIÓN MULTIANUAL: Si se especifica un salón, validar que pertenezca al año escolar actual
+    if (sId) {
+      const salonCheck = await db.query(
+        `SELECT id, anio_escolar FROM salones WHERE id = $1`,
+        [sId]
+      );
+
+      if (salonCheck.rows.length === 0) {
+        return res.status(404).json({ mensaje: 'El salón seleccionado no existe' });
+      }
+
+      if (salonCheck.rows[0].anio_escolar !== anioActual) {
+        return res.status(400).json({
+          mensaje: `No está permitido registrar incidencias en salones de años escolares pasados (${salonCheck.rows[0].anio_escolar}).`
+        });
+      }
+    }
+
     const query = `
       INSERT INTO incidencias (docente_id, estudiante_id, salon_id, tipo, descripcion)
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `;
-    const sId = salonId ? parseInt(salonId) : null;
     const result = await db.query(query, [docenteId, parseInt(estudianteId), sId, tipo, descripcion]);
 
     res.status(201).json({ mensaje: 'Incidencia registrada correctamente', incidencia: result.rows[0] });
@@ -31,7 +51,7 @@ router.post('/', permitirRoles('DOCENTE'), async (req, res) => {
   }
 });
 
-// 2. Obtener lista de estudiantes matriculados en un salón (para el desplegable del modal)
+// 2. Obtener lista de estudiantes por salón
 router.get('/estudiantes-salon/:salonId', permitirRoles('DOCENTE', 'DIRECTIVO'), async (req, res) => {
   const { salonId } = req.params;
 
@@ -51,7 +71,7 @@ router.get('/estudiantes-salon/:salonId', permitirRoles('DOCENTE', 'DIRECTIVO'),
   }
 });
 
-// 3. Historial de incidencias registradas por el docente en sesión (DOCENTE)
+// 3. Mis reportes de incidencias emitidos (DOCENTE)
 router.get('/docente/mis-reportes', permitirRoles('DOCENTE'), async (req, res) => {
   const docenteId = req.usuario.id;
   try {
@@ -59,7 +79,7 @@ router.get('/docente/mis-reportes', permitirRoles('DOCENTE'), async (req, res) =
       SELECT i.id, i.tipo, i.descripcion,
              TO_CHAR(i.fecha_registro, 'DD/MM/YYYY HH24:MI') AS fecha,
              CONCAT(est.apellidos, ', ', est.nombres) AS estudiante_nombre, est.dni AS estudiante_dni,
-             CONCAT(s.grado, ' "', s.seccion, '"') AS salon_nombre
+             COALESCE(CONCAT(s.grado, ' "', s.seccion, '" (', s.anio_escolar, ')'), 'Sin salón') AS salon_nombre
       FROM incidencias i
       JOIN usuarios est ON i.estudiante_id = est.id
       LEFT JOIN salones s ON i.salon_id = s.id

@@ -1,9 +1,11 @@
 // frontend/src/pages/AsistenciaPage.jsx
 import { useState, useEffect } from 'react';
 import { fetchAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import * as XLSX from 'xlsx';
 
 export default function AsistenciaPage() {
+  const { usuario } = useAuth();
   const [salones, setSalones] = useState([]);
   const [salonSeleccionado, setSalonSeleccionado] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
@@ -15,8 +17,8 @@ export default function AsistenciaPage() {
   const [esFinDeSemana, setEsFinDeSemana] = useState(false);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
 
-  // Estados para el reporte mensual
-  const [mesReporte, setMesReporte] = useState(new Date().getMonth() + 1); // 1 a 12
+  // Reporte mensual
+  const [mesReporte, setMesReporte] = useState(new Date().getMonth() + 1);
   const [anioReporte, setAnioReporte] = useState(new Date().getFullYear());
 
   const mesesNombres = [
@@ -24,7 +26,6 @@ export default function AsistenciaPage() {
     'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'
   ];
 
-  // Validar si la fecha cae sábado (6) o domingo (0)
   const validarFinDeSemana = (fechaStr) => {
     const d = new Date(fechaStr + 'T00:00:00');
     const day = d.getDay();
@@ -33,7 +34,7 @@ export default function AsistenciaPage() {
     if (esFDS) {
       setMensaje({
         tipo: 'error',
-        texto: 'La fecha seleccionada corresponde a un fin de semana (sábado/domingo). No se registran asistencias.',
+        texto: 'La fecha seleccionada corresponde a un fin de semana. No se registran asistencias.',
       });
     } else {
       setMensaje({ tipo: '', texto: '' });
@@ -41,17 +42,32 @@ export default function AsistenciaPage() {
   };
 
   useEffect(() => {
-    const cargarSalones = async () => {
+    const cargarSalonesSegunRol = async () => {
       try {
-        const data = await fetchAPI('/classrooms');
-        setSalones(data);
-        if (data.length > 0) setSalonSeleccionado(data[0].id.toString());
+        if (usuario.rol === 'DOCENTE') {
+          // El docente auto-detecta su salón asignado del año actual
+          const data = await fetchAPI(`/classrooms/mi-salon-asignado?anio=${anioReporte}`);
+          if (data.asignado) {
+            setSalones([data.salon]);
+            setSalonSeleccionado(data.salon.id.toString());
+          } else {
+            setMensaje({ tipo: 'error', texto: 'No tiene un salón asignado para este año escolar.' });
+          }
+        } else {
+          // Directivos y Administrativos listan salones del año seleccionado
+          const data = await fetchAPI(`/classrooms?anio=${anioReporte}`);
+          setSalones(data);
+          if (data.length > 0) setSalonSeleccionado(data[0].id.toString());
+        }
       } catch (err) {
         setMensaje({ tipo: 'error', texto: err.message });
       }
     };
-    cargarSalones();
-  }, []);
+
+    if (usuario?.rol) {
+      cargarSalonesSegunRol();
+    }
+  }, [usuario, anioReporte]);
 
   const cargarAsistenciaSalon = async () => {
     validarFinDeSemana(fecha);
@@ -60,7 +76,6 @@ export default function AsistenciaPage() {
 
     try {
       const data = await fetchAPI(`/attendance/salon/${salonSeleccionado}?fecha=${fecha}`);
-      // Orden alfabético por apellidos
       const listaOrdenada = data.sort((a, b) => a.apellidos.localeCompare(b.apellidos));
       setEstudiantes(listaOrdenada);
 
@@ -123,33 +138,29 @@ export default function AsistenciaPage() {
     }
   };
 
-  // Generar Reporte Mensual en Excel (Matriz Lunes a Viernes)
   const handleExportarReporteMensual = async () => {
     if (!salonSeleccionado) return;
     setExportando(true);
     setMensaje({ tipo: '', texto: '' });
 
     try {
-      // 1. Petición a la API para obtener registros del mes
       const rawData = await fetchAPI(
         `/attendance/salon/${salonSeleccionado}/mes?anio=${anioReporte}&mes=${mesReporte}`
       );
 
-      // 2. Calcular los días hábiles (Lunes a Viernes) del mes seleccionado
       const diasHabiles = [];
       const totalDiasMes = new Date(anioReporte, mesReporte, 0).getDate();
 
       for (let dia = 1; dia <= totalDiasMes; dia++) {
         const fechaObj = new Date(anioReporte, mesReporte - 1, dia);
         const diaSemana = fechaObj.getDay();
-        if (diaSemana !== 0 && diaSemana !== 6) { // Excluir Sábados (6) y Domingos (0)
+        if (diaSemana !== 0 && diaSemana !== 6) {
           const isoFecha = `${anioReporte}-${String(mesReporte).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
           const formatoCabecera = `${String(dia).padStart(2, '0')}/${String(mesReporte).padStart(2, '0')}/${anioReporte}`;
           diasHabiles.push({ isoFecha, formatoCabecera });
         }
       }
 
-      // 3. Organizar datos por estudiante
       const mapaEstudiantes = {};
       rawData.forEach((row) => {
         if (!mapaEstudiantes[row.estudiante_id]) {
@@ -165,7 +176,6 @@ export default function AsistenciaPage() {
         }
       });
 
-      // 4. Construir las filas ordenadas alfabéticamente por apellido
       const listaEstudiantes = Object.values(mapaEstudiantes).sort((a, b) =>
         a.apellidosNombres.localeCompare(b.apellidosNombres)
       );
@@ -177,7 +187,6 @@ export default function AsistenciaPage() {
           'Apellidos y Nombres': est.apellidosNombres,
         };
 
-        // Columna dinámica para cada día hábil del mes
         diasHabiles.forEach((dh) => {
           fila[dh.formatoCabecera] = est.asistencias[dh.isoFecha] || '-';
         });
@@ -185,7 +194,6 @@ export default function AsistenciaPage() {
         return fila;
       });
 
-      // 5. Descarga de archivo Excel
       const salonInfo = salones.find((s) => s.id.toString() === salonSeleccionado);
       const nombreSalon = salonInfo ? `${salonInfo.grado}_${salonInfo.seccion}` : 'salon';
 
@@ -193,11 +201,10 @@ export default function AsistenciaPage() {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Asistencia Mensual');
 
-      // Ancho automático de columnas
       worksheet['!cols'] = [
-        { wch: 5 },  // N°
-        { wch: 12 }, // DNI
-        { wch: 30 }, // Apellidos y Nombres
+        { wch: 5 },
+        { wch: 12 },
+        { wch: 30 },
         ...diasHabiles.map(() => ({ wch: 12 })),
       ];
 
@@ -238,11 +245,12 @@ export default function AsistenciaPage() {
               <select
                 value={salonSeleccionado}
                 onChange={(e) => setSalonSeleccionado(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                disabled={usuario?.rol === 'DOCENTE'}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm disabled:bg-slate-100 font-medium"
               >
                 {salones.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.grado} "{s.seccion}" ({s.anio_escolar})
+                    {s.grado} "{s.seccion}" ({s.anio_escolar || new Date().getFullYear()})
                   </option>
                 ))}
               </select>
@@ -289,7 +297,7 @@ export default function AsistenciaPage() {
             <button
               type="button"
               onClick={handleExportarReporteMensual}
-              disabled={exportando}
+              disabled={exportando || !salonSeleccionado}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg text-sm shadow-xs transition disabled:opacity-50"
             >
               {exportando ? 'Generando...' : 'Descargar Excel'}
