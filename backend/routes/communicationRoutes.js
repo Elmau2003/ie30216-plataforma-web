@@ -47,7 +47,6 @@ router.post('/comunicados', permitirRoles('DIRECTIVO'), upload.single('archivo')
   let archivoUrl = null;
 
   try {
-    // Si se adjuntó un archivo en el formulario, se procesa la subida a Supabase
     if (req.file) {
       archivoUrl = await subirArchivoSupabase(req.file, 'comunicados');
     }
@@ -121,7 +120,6 @@ router.post('/solicitudes', permitirRoles('DOCENTE'), upload.single('archivo'), 
   let archivoUrl = null;
 
   try {
-    // Solo sube a Supabase si req.file efectivamente existe
     if (req.file) {
       archivoUrl = await subirArchivoSupabase(req.file, 'solicitudes');
     }
@@ -132,8 +130,6 @@ router.post('/solicitudes', permitirRoles('DOCENTE'), upload.single('archivo'), 
       RETURNING *
     `;
     const result = await db.query(query, [docenteId, asunto, descripcion, archivoUrl]);
-    
-    // Garantizar respuesta JSON explícita
     return res.status(201).json({ mensaje: 'Solicitud enviada correctamente', solicitud: result.rows[0] });
   } catch (error) {
     console.error('Error al enviar solicitud:', error);
@@ -166,7 +162,7 @@ router.get('/solicitudes/todas', permitirRoles('DIRECTIVO'), async (req, res) =>
     const query = `
       SELECT s.id, s.asunto, s.descripcion, s.estado, s.respuesta_directivo, s.archivo_url,
              TO_CHAR(s.fecha_envio, 'DD/MM/YYYY HH24:MI') AS fecha,
-             CONCAT(u.nombres, ' ', u.apellidos) AS docente, u.dni
+             CONCAT(u.nombres, ' ', u.apellidos) AS docente, u.dni AS docente_dni
       FROM solicitudes s
       JOIN usuarios u ON s.docente_id = u.id
       ORDER BY s.fecha_envio DESC
@@ -196,14 +192,17 @@ router.put('/solicitudes/:id/responder', permitirRoles('DIRECTIVO'), async (req,
       RETURNING *
     `;
     const result = await db.query(query, [estado, respuestaDirectivo || '', id]);
-    res.json({ mensaje: 'Solicitud actualizada', solicitud: result.rows[0] });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ mensaje: 'Solicitud no encontrada' });
+    }
+    res.json({ mensaje: 'Solicitud actualizada correctamente', solicitud: result.rows[0] });
   } catch (error) {
     console.error('Error al responder solicitud:', error);
     res.status(500).json({ mensaje: 'Error interno al procesar la solicitud' });
   }
 });
 
-// Listar directivos activos destinatarios (rol_id = 1, excluyendo al admin DNI '00000000')
+// 8. Listar directivos activos destinatarios (rol_id = 1, excluyendo admin DNI '00000000')
 router.get('/directivos-activos', async (req, res) => {
   try {
     const query = `
@@ -222,63 +221,15 @@ router.get('/directivos-activos', async (req, res) => {
   }
 });
 
-// 6. Listar todas las solicitudes recibidas por Directivos (DIRECTIVO)
-router.get('/solicitudes/todas', permitirRoles('DIRECTIVO'), async (req, res) => {
-  try {
-    const query = `
-      SELECT s.id, s.asunto, s.descripcion, s.estado, s.respuesta_directivo, s.archivo_url,
-             TO_CHAR(s.fecha_envio, 'DD/MM/YYYY HH24:MI') AS fecha,
-             CONCAT(u.nombres, ' ', u.apellidos) AS docente, u.dni AS docente_dni
-      FROM solicitudes s
-      JOIN usuarios u ON s.docente_id = u.id
-      ORDER BY s.fecha_envio DESC
-    `;
-    const result = await db.query(query);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error al consultar solicitudes para directivo:', error);
-    res.status(500).json({ mensaje: 'Error al listar solicitudes' });
-  }
-});
-
-// 7. Atender / Responder una solicitud (DIRECTIVO)
-router.put('/solicitudes/:id/responder', permitirRoles('DIRECTIVO'), async (req, res) => {
-  const { id } = req.params;
-  const { estado, respuestaDirectivo } = req.body;
-
-  if (!['ATENDIDO', 'RECHAZADO'].includes(estado)) {
-    return res.status(400).json({ mensaje: 'Estado inválido' });
-  }
-
-  try {
-    const query = `
-      UPDATE solicitudes
-      SET estado = $1, respuesta_directivo = $2
-      WHERE id = $3
-      RETURNING *
-    `;
-    const result = await db.query(query, [estado, respuestaDirectivo || '', id]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ mensaje: 'Solicitud no encontrada' });
-    }
-
-    res.json({ mensaje: 'Solicitud actualizada correctamente', solicitud: result.rows[0] });
-  } catch (error) {
-    console.error('Error al responder solicitud:', error);
-    res.status(500).json({ mensaje: 'Error interno al procesar la solicitud' });
-  }
-}); 
-
 // ==================== COMUNICADOS DOCENTE -> ESTUDIANTES ====================
 
-// 1. Emitir comunicado para Estudiantes / Padres (DOCENTE)
+// 9. Publicar comunicado de aula (DOCENTE)
 router.post('/comunicados-aula', permitirRoles('DOCENTE'), upload.single('archivo'), async (req, res) => {
   const { salonId, asunto, contenido } = req.body;
   const docenteId = req.usuario.id;
 
   if (!asunto || !contenido) {
-    return res.status(400).json({ mensaje: 'El asunto y el contenido son obligatorios' });
+    return res.status(400).json({ mensaje: 'El asunto y el contenido son requeridos' });
   }
 
   let archivoUrl = null;
@@ -288,22 +239,25 @@ router.post('/comunicados-aula', permitirRoles('DOCENTE'), upload.single('archiv
       archivoUrl = await subirArchivoSupabase(req.file, 'comunicados-aula');
     }
 
+    const sId = (salonId && salonId !== 'TODOS' && salonId !== 'null' && salonId !== '') 
+      ? parseInt(salonId) 
+      : null;
+
     const query = `
       INSERT INTO comunicados_aula (docente_id, salon_id, asunto, contenido, archivo_url)
-      VALUES ($1, $2, $3, $4)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `;
-    const sId = salonId && salonId !== 'TODOS' ? parseInt(salonId) : null;
     const result = await db.query(query, [docenteId, sId, asunto, contenido, archivoUrl]);
 
-    res.status(201).json({ mensaje: 'Comunicado enviado a los estudiantes', comunicado: result.rows[0] });
+    res.status(201).json({ mensaje: 'Comunicado publicado exitosamente', comunicado: result.rows[0] });
   } catch (error) {
-    console.error('Error al emitir comunicado de aula:', error);
+    console.error('Error al publicar comunicado de aula:', error.message);
     res.status(500).json({ mensaje: 'Error interno al publicar el comunicado' });
   }
 });
 
-// 2. Historial de comunicados enviados por el Docente (DOCENTE)
+// 10. Listar avisos de aula publicados por el docente (DOCENTE)
 router.get('/comunicados-aula/mis-publicaciones', permitirRoles('DOCENTE'), async (req, res) => {
   const docenteId = req.usuario.id;
   try {
@@ -319,12 +273,28 @@ router.get('/comunicados-aula/mis-publicaciones', permitirRoles('DOCENTE'), asyn
     const result = await db.query(query, [docenteId]);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error al listar comunicados de aula del docente:', error);
-    res.status(500).json({ mensaje: 'Error al consultar historial de publicaciones' });
+    console.error('Error al consultar avisos del docente:', error.message);
+    res.status(500).json({ mensaje: 'Error al consultar publicaciones de aula' });
   }
 });
 
-// 3. Ver comunicados del Salón del Estudiante - SOLO LECTURA (ESTUDIANTE)
+// 11. Listar salones para el desplegable (Solo id, grado, seccion)
+router.get('/salones-disponibles', async (req, res) => {
+  try {
+    const query = `
+      SELECT id, grado, seccion 
+      FROM salones 
+      ORDER BY grado ASC, seccion ASC
+    `;
+    const result = await db.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al listar salones disponibles:', error.message);
+    res.status(500).json({ mensaje: 'Error al consultar lista de salones' });
+  }
+});
+
+// 12. Ver comunicados del Salón del Estudiante - SOLO LECTURA (ESTUDIANTE)
 router.get('/comunicados-aula/estudiante', permitirRoles('ESTUDIANTE'), async (req, res) => {
   const estudianteId = req.usuario.id;
   try {
@@ -339,10 +309,10 @@ router.get('/comunicados-aula/estudiante', permitirRoles('ESTUDIANTE'), async (r
       GROUP BY ca.id, u.nombres, u.apellidos
       ORDER BY ca.fecha_envio DESC
     `;
-    const result = await db.query(query);
+    const result = await db.query(query, [estudianteId]);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error al consultar comunicados para el estudiante:', error);
+    console.error('Error al consultar comunicados para el estudiante:', error.message);
     res.status(500).json({ mensaje: 'Error al obtener comunicados del salón' });
   }
 });

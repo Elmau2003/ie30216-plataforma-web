@@ -27,24 +27,25 @@ export default function DocenteTramitesPage() {
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
 
-  const cargarDatos = async () => {
-    try {
-      const [resComDir, resSol, resComAula, resDirectivos, resSalones] = await Promise.all([
-        fetchAPI('/communications/comunicados/mis-comunicados').catch(() => []),
-        fetchAPI('/communications/solicitudes/mis-solicitudes').catch(() => []),
-        fetchAPI('/communications/comunicados-aula/mis-publicaciones').catch(() => []),
-        fetchAPI('/communications/directivos-activos').catch(() => []),
-        fetchAPI('/salones').catch(() => []),
-      ]);
 
-      setComunicadosDirectivo(Array.isArray(resComDir) ? resComDir : []);
-      setSolicitudes(Array.isArray(resSol) ? resSol : []);
-      setComunicadosAula(Array.isArray(resComAula) ? resComAula : []);
-      setDirectivos(Array.isArray(resDirectivos) ? resDirectivos : []);
-      setSalones(Array.isArray(resSalones) ? resSalones : []);
-    } catch (err) {
-      setMensaje({ tipo: 'error', texto: err.message });
-    }
+  const cargarDatos = async () => {
+  try {
+    const [resComDir, resSol, resComAula, resDirectivos, resSalones] = await Promise.all([
+      fetchAPI('/communications/comunicados/mis-comunicados').catch(() => []),
+      fetchAPI('/communications/solicitudes/mis-solicitudes').catch(() => []),
+      fetchAPI('/communications/comunicados-aula/mis-publicaciones').catch(() => []),
+      fetchAPI('/communications/directivos-activos').catch(() => []),
+      fetchAPI('/communications/salones-disponibles').catch(() => []),
+    ]);
+
+    setComunicadosDirectivo(Array.isArray(resComDir) ? resComDir : []);
+    setSolicitudes(Array.isArray(resSol) ? resSol : []);
+    setComunicadosAula(Array.isArray(resComAula) ? resComAula : []);
+    setDirectivos(Array.isArray(resDirectivos) ? resDirectivos : []);
+    setSalones(Array.isArray(resSalones) ? resSalones : []);
+  } catch (err) {
+    setMensaje({ tipo: 'error', texto: err.message });
+  }
   };
 
   useEffect(() => {
