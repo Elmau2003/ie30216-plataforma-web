@@ -11,6 +11,7 @@ import EstudiantePage from './pages/EstudiantePage';
 import ComunicadosDirectivoPage from './pages/ComunicadosDirectivoPage';
 import DocenteTramitesPage from './pages/DocenteTramitesPage';
 import DirectivoSolicitudesPage from './pages/DirectivoSolicitudesPage';
+import EstudianteComunicadosPage from './pages/EstudianteComunicadosPage';
 
 function MainLayout() {
   const { usuario, logout, cargando } = useAuth();
@@ -66,6 +67,7 @@ function MainLayout() {
           {tabActiva === 'comunicados-directivo' && <ComunicadosDirectivoPage />}
           {tabActiva === 'solicitudes-directivo' && <DirectivoSolicitudesPage />}
           {tabActiva === 'tramites-docente' && <DocenteTramitesPage />}
+          {tabActiva === 'comunicados-estudiante' && <EstudianteComunicadosPage />}
         </main>
       </div>
     </div>

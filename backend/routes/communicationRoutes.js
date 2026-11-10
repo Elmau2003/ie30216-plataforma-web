@@ -270,4 +270,81 @@ router.put('/solicitudes/:id/responder', permitirRoles('DIRECTIVO'), async (req,
   }
 }); 
 
+// ==================== COMUNICADOS DOCENTE -> ESTUDIANTES ====================
+
+// 1. Emitir comunicado para Estudiantes / Padres (DOCENTE)
+router.post('/comunicados-aula', permitirRoles('DOCENTE'), upload.single('archivo'), async (req, res) => {
+  const { salonId, asunto, contenido } = req.body;
+  const docenteId = req.usuario.id;
+
+  if (!asunto || !contenido) {
+    return res.status(400).json({ mensaje: 'El asunto y el contenido son obligatorios' });
+  }
+
+  let archivoUrl = null;
+
+  try {
+    if (req.file) {
+      archivoUrl = await subirArchivoSupabase(req.file, 'comunicados-aula');
+    }
+
+    const query = `
+      INSERT INTO comunicados_aula (docente_id, salon_id, asunto, contenido, archivo_url)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `;
+    const sId = salonId && salonId !== 'TODOS' ? parseInt(salonId) : null;
+    const result = await db.query(query, [docenteId, sId, asunto, contenido, archivoUrl]);
+
+    res.status(201).json({ mensaje: 'Comunicado enviado a los estudiantes', comunicado: result.rows[0] });
+  } catch (error) {
+    console.error('Error al emitir comunicado de aula:', error);
+    res.status(500).json({ mensaje: 'Error interno al publicar el comunicado' });
+  }
+});
+
+// 2. Historial de comunicados enviados por el Docente (DOCENTE)
+router.get('/comunicados-aula/mis-publicaciones', permitirRoles('DOCENTE'), async (req, res) => {
+  const docenteId = req.usuario.id;
+  try {
+    const query = `
+      SELECT ca.id, ca.asunto, ca.contenido, ca.archivo_url,
+             TO_CHAR(ca.fecha_envio, 'DD/MM/YYYY HH24:MI') AS fecha,
+             COALESCE(CONCAT(s.grado, ' "', s.seccion, '"'), 'Todos mis salones') AS salon_nombre
+      FROM comunicados_aula ca
+      LEFT JOIN salones s ON ca.salon_id = s.id
+      WHERE ca.docente_id = $1
+      ORDER BY ca.fecha_envio DESC
+    `;
+    const result = await db.query(query, [docenteId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al listar comunicados de aula del docente:', error);
+    res.status(500).json({ mensaje: 'Error al consultar historial de publicaciones' });
+  }
+});
+
+// 3. Ver comunicados del Salón del Estudiante - SOLO LECTURA (ESTUDIANTE)
+router.get('/comunicados-aula/estudiante', permitirRoles('ESTUDIANTE'), async (req, res) => {
+  const estudianteId = req.usuario.id;
+  try {
+    const query = `
+      SELECT ca.id, ca.asunto, ca.contenido, ca.archivo_url,
+             TO_CHAR(ca.fecha_envio, 'DD/MM/YYYY HH24:MI') AS fecha,
+             CONCAT(u.nombres, ' ', u.apellidos) AS docente
+      FROM comunicados_aula ca
+      JOIN usuarios u ON ca.docente_id = u.id
+      LEFT JOIN matriculas m ON m.salon_id = ca.salon_id OR ca.salon_id IS NULL
+      WHERE m.estudiante_id = $1 OR ca.salon_id IS NULL
+      GROUP BY ca.id, u.nombres, u.apellidos
+      ORDER BY ca.fecha_envio DESC
+    `;
+    const result = await db.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al consultar comunicados para el estudiante:', error);
+    res.status(500).json({ mensaje: 'Error al obtener comunicados del salón' });
+  }
+});
+
 module.exports = router;

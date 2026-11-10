@@ -16,6 +16,7 @@ export default function Sidebar({ rol, tabActiva, setTabActiva }) {
     ],
     ESTUDIANTE: [
       { id: 'dashboard', nombre: 'Panel Principal' },
+      { id: 'comunicados-estudiante', nombre: 'Comunicados del Aula' },
       { id: 'boleta', nombre: 'Mis Calificaciones' },
       { id: 'asistencia_view', nombre: 'Mi Asistencia' },
     ],
