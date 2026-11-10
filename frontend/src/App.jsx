@@ -61,18 +61,24 @@ function MainLayout() {
               </p>
             </div>
           )}
+
+          {/* Vistas Directivo / Administrativo / Docente */}
           {tabActiva === 'usuarios' && <UsuariosPage />}
           {tabActiva === 'salones' && <SalonesPage />}
           {tabActiva === 'asistencia' && <AsistenciaPage />}
           {tabActiva === 'notas' && <NotasPage />}
-          {tabActiva === 'libreta' && <EstudiantePage />}
           {tabActiva === 'comunicados-directivo' && <ComunicadosDirectivoPage />}
           {tabActiva === 'solicitudes-directivo' && <DirectivoSolicitudesPage />}
           {tabActiva === 'tramites-docente' && <DocenteTramitesPage />}
-          {tabActiva === 'comunicados-estudiante' && <EstudianteComunicadosPage />}
           {tabActiva === 'incidencias-docente' && <DocenteIncidenciasPage />}
-          {tabActiva === 'incidencias-estudiante' && <EstudianteIncidenciasPage />}
 
+          {/* Vistas Estudiante separadas por la prop tabActiva */}
+          {['boleta', 'asistencia_view', 'libreta'].includes(tabActiva) && (
+            <EstudiantePage tabActiva={tabActiva} />
+          )}
+
+          {tabActiva === 'comunicados-estudiante' && <EstudianteComunicadosPage />}
+          {tabActiva === 'incidencias-estudiante' && <EstudianteIncidenciasPage />}
         </main>
       </div>
     </div>

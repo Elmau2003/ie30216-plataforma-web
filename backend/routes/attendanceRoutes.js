@@ -128,4 +128,30 @@ router.get('/estudiante/:estudianteId', async (req, res) => {
   }
 });
 
+// Consultar el récord de inasistencias y tardanzas de un estudiante por año lectivo
+router.get('/estudiante/:estudianteId', async (req, res) => {
+  const { estudianteId } = req.params;
+  const anio = req.query.anio || new Date().getFullYear();
+
+  if (req.usuario.rol === 'ESTUDIANTE' && parseInt(estudianteId) !== req.usuario.id) {
+    return res.status(403).json({ mensaje: 'No tienes permiso para ver asistencias de otro estudiante' });
+  }
+
+  try {
+    const query = `
+      SELECT TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha, estado
+      FROM asistencias
+      WHERE estudiante_id = $1 
+        AND EXTRACT(YEAR FROM fecha) = $2
+        AND estado IN ('FALTA', 'TARDANZA', 'JUSTIFICADO')
+      ORDER BY fecha DESC
+    `;
+    const result = await db.query(query, [estudianteId, parseInt(anio)]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al obtener asistencias del estudiante:', error.message);
+    res.status(500).json({ mensaje: 'Error al obtener récord de asistencias' });
+  }
+});
+
 module.exports = router;
