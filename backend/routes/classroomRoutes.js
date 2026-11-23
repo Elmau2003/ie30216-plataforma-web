@@ -11,7 +11,7 @@ router.use(verificarToken);
 // 1.1 Obtener EL SALÓN ASIGNADO al docente en el año actual (DOCENTE)
 router.get('/mi-salon-asignado', permitirRoles('DOCENTE'), async (req, res) => {
   const docenteId = req.usuario.id;
-  const anio = req.query.anio || new Date().getFullYear();
+  const anio = parseInt(req.query.anio, 10) || new Date().getFullYear();
 
   try {
     const query = `
@@ -21,7 +21,7 @@ router.get('/mi-salon-asignado', permitirRoles('DOCENTE'), async (req, res) => {
       WHERE sd.docente_id = $1 AND s.anio_escolar = $2
       LIMIT 1
     `;
-    const result = await db.query(query, [docenteId, parseInt(anio)]);
+    const result = await db.query(query, [docenteId, anio]);
 
     if (result.rows.length === 0) {
       return res.json({ asignado: false, mensaje: 'No tiene un salón asignado para este año escolar.' });
@@ -29,50 +29,70 @@ router.get('/mi-salon-asignado', permitirRoles('DOCENTE'), async (req, res) => {
 
     res.json({ asignado: true, salon: result.rows[0] });
   } catch (error) {
-    console.error('Error al obtener salón del docente:', error.message);
+    console.error('Error al obtener salón del docente:', error);
     res.status(500).json({ mensaje: 'Error al consultar salón asignado' });
   }
 });
 
 // 1.2 Asignar Docente a un Salón (DIRECTIVO y ADMINISTRATIVO)
 router.post('/asignar-docente', permitirRoles('DIRECTIVO', 'ADMINISTRATIVO'), async (req, res) => {
-  const { salonId, docenteId } = req.body;
+  const salonIdNum = parseInt(req.body.salonId, 10);
+  const docenteIdNum = parseInt(req.body.docenteId, 10);
 
-  if (!salonId || !docenteId) {
-    return res.status(400).json({ mensaje: 'Debe especificar el salón y el docente' });
+  if (Number.isNaN(salonIdNum) || Number.isNaN(docenteIdNum)) {
+    return res.status(400).json({ mensaje: 'Debe especificar un salón y un docente válidos' });
   }
 
   try {
+    // Verificar que el salón exista
+    const salonCheck = await db.query('SELECT id FROM salones WHERE id = $1', [salonIdNum]);
+    if (salonCheck.rows.length === 0) {
+      return res.status(404).json({ mensaje: 'El salón seleccionado no existe' });
+    }
+
+    // Verificar que el usuario exista y tenga rol DOCENTE
     const docQuery = `
-      SELECT u.id FROM usuarios u
+      SELECT u.id, u.activo, r.nombre AS rol
+      FROM usuarios u
       JOIN roles r ON u.rol_id = r.id
-      WHERE u.id = $1 AND UPPER(r.nombre) = 'DOCENTE'
+      WHERE u.id = $1
     `;
-    const docCheck = await db.query(docQuery, [docenteId]);
+    const docCheck = await db.query(docQuery, [docenteIdNum]);
     if (docCheck.rows.length === 0) {
+      return res.status(404).json({ mensaje: 'El docente seleccionado no existe' });
+    }
+
+    const rolUsuario = String(docCheck.rows[0].rol || '').trim().toUpperCase();
+    if (rolUsuario !== 'DOCENTE') {
       return res.status(400).json({ mensaje: 'El usuario seleccionado no tiene rol de DOCENTE' });
     }
 
-    const query = `
+    const insertQuery = `
       INSERT INTO salon_docente (salon_id, docente_id)
       VALUES ($1, $2)
-      ON CONFLICT DO NOTHING
+      ON CONFLICT (salon_id, docente_id) DO NOTHING
+      RETURNING salon_id, docente_id
     `;
-    await db.query(query, [salonId, docenteId]);
+    const inserted = await db.query(insertQuery, [salonIdNum, docenteIdNum]);
 
-    res.json({ mensaje: 'Docente asignado al salón correctamente' });
+    if (inserted.rows.length === 0) {
+      return res.json({ mensaje: 'El docente ya se encontraba asignado a este salón', yaAsignado: true });
+    }
+
+    res.json({ mensaje: 'Docente asignado al salón correctamente', asignacion: inserted.rows[0] });
   } catch (error) {
-    console.error('Error al asignar docente:', error.message);
+    console.error('Error al asignar docente:', error);
     res.status(500).json({ mensaje: 'Error al asignar docente al salón' });
   }
 });
 
 // 1.3 Matricular Estudiante en un Salón (DIRECTIVO y ADMINISTRATIVO)
 router.post('/matricular', permitirRoles('DIRECTIVO', 'ADMINISTRATIVO'), async (req, res) => {
-  const { estudianteId, salonId } = req.body;
+  const estudianteIdNum = parseInt(req.body.estudianteId, 10);
+  const salonIdNum = parseInt(req.body.salonId, 10);
 
-  if (!estudianteId || !salonId) {
-    return res.status(400).json({ mensaje: 'Debe especificar el estudiante y el salón' });
+  if (Number.isNaN(estudianteIdNum) || Number.isNaN(salonIdNum)) {
+    return res.status(400).json({ mensaje: 'Debe especificar un estudiante y un salón válidos' });
   }
 
   try {
@@ -81,13 +101,13 @@ router.post('/matricular', permitirRoles('DIRECTIVO', 'ADMINISTRATIVO'), async (
       VALUES ($1, $2)
       RETURNING id, estudiante_id, salon_id
     `;
-    const result = await db.query(query, [estudianteId, salonId]);
+    const result = await db.query(query, [estudianteIdNum, salonIdNum]);
     res.status(201).json({ mensaje: 'Estudiante matriculado exitosamente', matricula: result.rows[0] });
   } catch (error) {
     if (error.code === '23505') {
       return res.status(400).json({ mensaje: 'El estudiante ya se encuentra matriculado en este salón' });
     }
-    console.error('Error al matricular estudiante:', error.message);
+    console.error('Error al matricular estudiante:', error);
     res.status(500).json({ mensaje: 'Error interno al realizar la matrícula' });
   }
 });
@@ -97,8 +117,9 @@ router.post('/matricular', permitirRoles('DIRECTIVO', 'ADMINISTRATIVO'), async (
 // 2.1 Crear un Salón (DIRECTIVO y ADMINISTRATIVO)
 router.post('/', permitirRoles('DIRECTIVO', 'ADMINISTRATIVO'), async (req, res) => {
   const { grado, seccion, anioEscolar } = req.body;
+  const anioNum = parseInt(anioEscolar, 10);
 
-  if (!grado || !seccion || !anioEscolar) {
+  if (!grado || !seccion || Number.isNaN(anioNum)) {
     return res.status(400).json({ mensaje: 'Todos los campos (grado, sección, año escolar) son obligatorios' });
   }
 
@@ -108,10 +129,10 @@ router.post('/', permitirRoles('DIRECTIVO', 'ADMINISTRATIVO'), async (req, res) 
       VALUES ($1, $2, $3)
       RETURNING id, grado, seccion, anio_escolar
     `;
-    const result = await db.query(query, [grado, seccion, parseInt(anioEscolar)]);
+    const result = await db.query(query, [String(grado).trim(), String(seccion).trim(), anioNum]);
     res.status(201).json({ mensaje: 'Salón creado exitosamente', salon: result.rows[0] });
   } catch (error) {
-    console.error('Error al crear salón:', error.message);
+    console.error('Error al crear salón:', error);
     res.status(500).json({ mensaje: 'Error al registrar el salón' });
   }
 });
@@ -126,7 +147,7 @@ router.get('/', async (req, res) => {
         s.grado, 
         s.seccion, 
         s.anio_escolar,
-        COUNT(DISTINCT m.estudiante_id) AS total_estudiantes,
+        COUNT(DISTINCT m.estudiante_id)::int AS total_estudiantes,
         COALESCE(
           STRING_AGG(DISTINCT CONCAT(u.nombres, ' ', u.apellidos), ', '), 
           'Sin docente asignado'
@@ -140,7 +161,7 @@ router.get('/', async (req, res) => {
 
     if (anio) {
       query += ` WHERE s.anio_escolar = $1`;
-      params.push(parseInt(anio));
+      params.push(parseInt(anio, 10));
     }
 
     query += `
@@ -150,7 +171,7 @@ router.get('/', async (req, res) => {
     const result = await db.query(query, params);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error al listar salones:', error.message);
+    console.error('Error al listar salones:', error);
     res.status(500).json({ mensaje: 'Error al obtener la lista de salones' });
   }
 });

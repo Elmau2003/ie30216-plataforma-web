@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { fetchAPI } from './services/api';
 import Login from './pages/Login';
@@ -15,6 +15,38 @@ import DirectivoSolicitudesPage from './pages/DirectivoSolicitudesPage';
 import EstudianteComunicadosPage from './pages/EstudianteComunicadosPage';
 import DocenteIncidenciasPage from './pages/DocenteIncidenciasPage';
 import EstudianteIncidenciasPage from './pages/EstudianteIncidenciasPage';
+import AdminMesaPartesPage from './pages/AdminMesaPartesPage';
+import AdminConsultasPage from './pages/AdminConsultasPage';
+
+const TABS_POR_ROL = {
+  DIRECTIVO: [
+    'dashboard',
+    'usuarios',
+    'salones',
+    'comunicados-directivo',
+    'solicitudes-directivo',
+  ],
+  ADMINISTRATIVO: [
+    'dashboard',
+    'mesa-partes',
+    'consultas-admin',
+  ],
+  DOCENTE: [
+    'dashboard',
+    'asistencia',
+    'notas',
+    'tramites-docente',
+    'incidencias-docente',
+  ],
+  ESTUDIANTE: [
+    'dashboard',
+    'comunicados-estudiante',
+    'boleta',
+    'asistencia_view',
+    'libreta',
+    'incidencias-estudiante',
+  ],
+};
 
 function ModalCambioPasswordObligatorio({ onCompletado, onLogout }) {
   const [passwordActual, setPasswordActual] = useState('');
@@ -143,6 +175,11 @@ function MainLayout() {
   const { usuario, logout, cargando } = useAuth();
   const [tabActiva, setTabActiva] = useState('dashboard');
 
+  // Siempre ir al panel principal al iniciar sesión, cambiar de usuario/rol o refrescar la página
+  useEffect(() => {
+    setTabActiva('dashboard');
+  }, [usuario?.id, usuario?.rol]);
+
   if (cargando) {
     return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
   }
@@ -151,8 +188,11 @@ function MainLayout() {
     return <Login />;
   }
 
+  const rolActual = String(usuario.rol || '').toUpperCase();
+  const tabsPermitidos = TABS_POR_ROL[rolActual] || ['dashboard'];
+  const tabSegura = tabsPermitidos.includes(tabActiva) ? tabActiva : 'dashboard';
+
   const handleCambioCompletado = () => {
-    // Si guardas el usuario en localStorage, actualizamos la bandera ahí también
     try {
       const guardado = localStorage.getItem('usuario');
       if (guardado) {
@@ -168,7 +208,7 @@ function MainLayout() {
 
   return (
     <div className="flex min-h-screen bg-slate-100">
-      <Sidebar rol={usuario.rol} tabActiva={tabActiva} setTabActiva={setTabActiva} />
+      <Sidebar rol={usuario.rol} tabActiva={tabSegura} setTabActiva={setTabActiva} />
 
       <div className="flex-1 flex flex-col">
         {/* Header superior */}
@@ -192,7 +232,7 @@ function MainLayout() {
 
         {/* Área de Contenido */}
         <main className="p-8 flex-1">
-          {tabActiva === 'dashboard' && (
+          {tabSegura === 'dashboard' && (
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
               <h2 className="text-lg font-bold text-slate-800 mb-2">¡Bienvenido(a), {usuario.nombres}!</h2>
               <p className="text-slate-600 text-sm">
@@ -201,23 +241,27 @@ function MainLayout() {
             </div>
           )}
 
-          {/* Vistas Directivo / Administrativo / Docente */}
-          {tabActiva === 'usuarios' && <UsuariosPage />}
-          {tabActiva === 'salones' && <SalonesPage />}
-          {tabActiva === 'asistencia' && <AsistenciaPage />}
-          {tabActiva === 'notas' && <NotasPage />}
-          {tabActiva === 'comunicados-directivo' && <ComunicadosDirectivoPage />}
-          {tabActiva === 'solicitudes-directivo' && <DirectivoSolicitudesPage />}
-          {tabActiva === 'tramites-docente' && <DocenteTramitesPage />}
-          {tabActiva === 'incidencias-docente' && <DocenteIncidenciasPage />}
+          {/* Vistas Directivo / Docente */}
+          {tabSegura === 'usuarios' && <UsuariosPage />}
+          {tabSegura === 'salones' && <SalonesPage />}
+          {tabSegura === 'asistencia' && <AsistenciaPage />}
+          {tabSegura === 'notas' && <NotasPage />}
+          {tabSegura === 'comunicados-directivo' && <ComunicadosDirectivoPage />}
+          {tabSegura === 'solicitudes-directivo' && <DirectivoSolicitudesPage />}
+          {tabSegura === 'tramites-docente' && <DocenteTramitesPage />}
+          {tabSegura === 'incidencias-docente' && <DocenteIncidenciasPage />}
+
+          {/* Vistas Administrativo (Mesa de Partes y Consultas Generales) */}
+          {tabSegura === 'mesa-partes' && <AdminMesaPartesPage />}
+          {tabSegura === 'consultas-admin' && <AdminConsultasPage />}
 
           {/* Vistas Estudiante separadas por la prop tabActiva */}
-          {['boleta', 'asistencia_view', 'libreta'].includes(tabActiva) && (
-            <EstudiantePage tabActiva={tabActiva} />
+          {['boleta', 'asistencia_view', 'libreta'].includes(tabSegura) && (
+            <EstudiantePage tabActiva={tabSegura} />
           )}
 
-          {tabActiva === 'comunicados-estudiante' && <EstudianteComunicadosPage />}
-          {tabActiva === 'incidencias-estudiante' && <EstudianteIncidenciasPage />}
+          {tabSegura === 'comunicados-estudiante' && <EstudianteComunicadosPage />}
+          {tabSegura === 'incidencias-estudiante' && <EstudianteIncidenciasPage />}
         </main>
       </div>
 

@@ -106,7 +106,7 @@ router.get('/comunicados/enviados', permitirRoles('DIRECTIVO'), async (req, res)
   }
 });
 
-// ==================== SOLICITUDES (Docente -> Directivo) ====================
+// ==================== SOLICITUDES INTERNAS (Docente -> Directivo) ====================
 
 // 4. Enviar nueva solicitud con adjunto opcional (DOCENTE)
 router.post('/solicitudes', permitirRoles('DOCENTE'), upload.single('archivo'), async (req, res) => {
@@ -125,8 +125,8 @@ router.post('/solicitudes', permitirRoles('DOCENTE'), upload.single('archivo'), 
     }
 
     const query = `
-      INSERT INTO solicitudes (docente_id, asunto, descripcion, archivo_url)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO solicitudes (docente_id, origen, asunto, descripcion, archivo_url)
+      VALUES ($1, 'INTERNO', $2, $3, $4)
       RETURNING *
     `;
     const result = await db.query(query, [docenteId, asunto, descripcion, archivoUrl]);
@@ -156,15 +156,26 @@ router.get('/solicitudes/mis-solicitudes', permitirRoles('DOCENTE'), async (req,
   }
 });
 
-// 6. Listar todas las solicitudes recibidas (DIRECTIVO)
+// 6. Listar todas las solicitudes internas y documentos externos recibidos (DIRECTIVO)
 router.get('/solicitudes/todas', permitirRoles('DIRECTIVO'), async (req, res) => {
   try {
     const query = `
-      SELECT s.id, s.asunto, s.descripcion, s.estado, s.respuesta_directivo, s.archivo_url,
+      SELECT s.id,
+             COALESCE(s.origen, 'INTERNO') AS origen,
+             s.numero_expediente,
+             s.tipo_remitente,
+             s.remitente_nombre,
+             s.remitente_documento,
+             s.asunto,
+             s.descripcion,
+             s.estado,
+             s.respuesta_directivo,
+             s.archivo_url,
              TO_CHAR(s.fecha_envio, 'DD/MM/YYYY HH24:MI') AS fecha,
-             CONCAT(u.nombres, ' ', u.apellidos) AS docente, u.dni AS docente_dni
+             COALESCE(CONCAT(u.nombres, ' ', u.apellidos), s.remitente_nombre, 'Remitente Externo') AS docente,
+             COALESCE(u.dni, s.remitente_documento, '-') AS docente_dni
       FROM solicitudes s
-      JOIN usuarios u ON s.docente_id = u.id
+      LEFT JOIN usuarios u ON s.docente_id = u.id
       ORDER BY s.fecha_envio DESC
     `;
     const result = await db.query(query);
@@ -199,6 +210,175 @@ router.put('/solicitudes/:id/responder', permitirRoles('DIRECTIVO'), async (req,
   } catch (error) {
     console.error('Error al responder solicitud:', error);
     res.status(500).json({ mensaje: 'Error interno al procesar la solicitud' });
+  }
+});
+
+// ==================== MESA DE PARTES / DOCUMENTOS EXTERNOS (ADMINISTRATIVO) ====================
+
+// 7.1 Registrar documento / solicitud externa (ADMINISTRATIVO)
+router.post('/solicitudes/externas', permitirRoles('ADMINISTRATIVO'), upload.single('archivo'), async (req, res) => {
+  const { tipoRemitente, remitenteNombre, remitenteDocumento, asunto, descripcion } = req.body;
+  const adminId = req.usuario.id;
+
+  if (!tipoRemitente || !remitenteNombre || !asunto || !descripcion) {
+    return res.status(400).json({
+      mensaje: 'Tipo de remitente, nombre/razón social, asunto y descripción son requeridos',
+    });
+  }
+
+  let archivoUrl = null;
+
+  try {
+    if (req.file) {
+      archivoUrl = await subirArchivoSupabase(req.file, 'mesa-partes');
+    }
+
+    const anio = new Date().getFullYear();
+    const countRes = await db.query(
+      `SELECT COUNT(*)::int AS total FROM solicitudes WHERE origen = 'EXTERNO' AND EXTRACT(YEAR FROM fecha_envio) = $1`,
+      [anio]
+    );
+    const correlativo = String((countRes.rows[0]?.total || 0) + 1).padStart(4, '0');
+    const numeroExpediente = `EXP-${anio}-${correlativo}`;
+
+    const query = `
+      INSERT INTO solicitudes (
+        docente_id,
+        registrado_por_id,
+        origen,
+        numero_expediente,
+        tipo_remitente,
+        remitente_nombre,
+        remitente_documento,
+        asunto,
+        descripcion,
+        archivo_url
+      )
+      VALUES ($1, $2, 'EXTERNO', $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `;
+
+    const result = await db.query(query, [
+      null,
+      adminId,
+      numeroExpediente,
+      tipoRemitente,
+      String(remitenteNombre).trim(),
+      remitenteDocumento ? String(remitenteDocumento).trim() : null,
+      String(asunto).trim(),
+      String(descripcion).trim(),
+      archivoUrl,
+    ]);
+
+    return res.status(201).json({
+      mensaje: `Documento externo registrado con expediente ${numeroExpediente}`,
+      solicitud: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Error al registrar solicitud externa:', error);
+    return res.status(500).json({ mensaje: 'Error interno al registrar el documento externo' });
+  }
+});
+
+// 7.2 Listar solicitudes / documentos externos (ADMINISTRATIVO / DIRECTIVO)
+router.get('/solicitudes/externas', permitirRoles('ADMINISTRATIVO', 'DIRECTIVO'), async (req, res) => {
+  try {
+    const query = `
+      SELECT s.id,
+             COALESCE(s.numero_expediente, CONCAT('SOL-', s.id)) AS numero_expediente,
+             s.origen,
+             s.tipo_remitente,
+             s.remitente_nombre,
+             s.remitente_documento,
+             s.asunto,
+             s.descripcion,
+             s.estado,
+             s.respuesta_directivo,
+             s.archivo_url,
+             TO_CHAR(s.fecha_envio, 'DD/MM/YYYY HH24:MI') AS fecha,
+             CONCAT(u.nombres, ' ', u.apellidos) AS registrado_por
+      FROM solicitudes s
+      LEFT JOIN usuarios u ON s.registrado_por_id = u.id
+      WHERE s.origen = 'EXTERNO'
+      ORDER BY s.fecha_envio DESC
+    `;
+    const result = await db.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al listar trámites externos:', error);
+    res.status(500).json({ mensaje: 'Error al consultar trámites externos' });
+  }
+});
+
+// ==================== CONSULTAS GENERALES (ADMINISTRATIVO) ====================
+
+// 7.3 Consulta resumida de estudiantes y su matrícula/salón (sin detalle académico o conductual)
+router.get('/consultas/estudiantes', permitirRoles('ADMINISTRATIVO', 'DIRECTIVO'), async (req, res) => {
+  const anio = req.query.anio || new Date().getFullYear();
+  const buscar = (req.query.q || '').trim().toLowerCase();
+
+  try {
+    const query = `
+      SELECT u.id,
+             u.dni,
+             u.nombres,
+             u.apellidos,
+             u.activo,
+             s.anio_escolar,
+             s.grado,
+             s.seccion
+      FROM usuarios u
+      JOIN roles r ON u.rol_id = r.id
+      LEFT JOIN matriculas m ON m.estudiante_id = u.id
+      LEFT JOIN salones s ON s.id = m.salon_id AND s.anio_escolar = $1
+      WHERE r.nombre = 'ESTUDIANTE'
+      ORDER BY u.apellidos ASC, u.nombres ASC
+    `;
+    const result = await db.query(query, [parseInt(anio)]);
+
+    const filtrados = buscar
+      ? result.rows.filter((est) => {
+          const nombreCompleto = `${est.nombres} ${est.apellidos}`.toLowerCase();
+          const dni = String(est.dni || '').toLowerCase();
+          return nombreCompleto.includes(buscar) || dni.includes(buscar);
+        })
+      : result.rows;
+
+    res.json(filtrados);
+  } catch (error) {
+    console.error('Error en consulta de estudiantes para administrativo:', error);
+    res.status(500).json({ mensaje: 'Error al consultar información de estudiantes' });
+  }
+});
+
+// 7.4 Consulta resumida de salones por año lectivo
+router.get('/consultas/salones', permitirRoles('ADMINISTRATIVO', 'DIRECTIVO'), async (req, res) => {
+  const anio = req.query.anio || new Date().getFullYear();
+
+  try {
+    const query = `
+      SELECT s.id,
+             s.grado,
+             s.seccion,
+             s.anio_escolar,
+             COUNT(DISTINCT m.estudiante_id)::int AS total_matriculados,
+             COALESCE(
+               STRING_AGG(DISTINCT CONCAT(u.nombres, ' ', u.apellidos), ', '),
+               'Sin docente asignado'
+             ) AS docentes_asignados
+      FROM salones s
+      LEFT JOIN matriculas m ON m.salon_id = s.id
+      LEFT JOIN salon_docente sd ON sd.salon_id = s.id
+      LEFT JOIN usuarios u ON u.id = sd.docente_id
+      WHERE s.anio_escolar = $1
+      GROUP BY s.id
+      ORDER BY s.grado ASC, s.seccion ASC
+    `;
+    const result = await db.query(query, [parseInt(anio)]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error en consulta de salones para administrativo:', error);
+    res.status(500).json({ mensaje: 'Error al consultar resumen de salones' });
   }
 });
 

@@ -22,6 +22,11 @@ export default function Sidebar({ rol, tabActiva, setTabActiva }) {
       { id: 'asistencia_view', nombre: 'Mi Asistencia' },
       { id: 'incidencias-estudiante', nombre: 'Mis Incidencias' },
     ],
+    ADMINISTRATIVO: [
+      { id: 'dashboard', nombre: 'Panel Principal' },
+      { id: 'mesa-partes', nombre: 'Mesa de Partes (Externos)' },
+      { id: 'consultas-admin', nombre: 'Consultas Generales' },
+    ],
   };
 
   const opciones = opcionesMenu[rol] || [];

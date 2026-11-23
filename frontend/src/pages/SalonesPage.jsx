@@ -86,6 +86,7 @@ export default function SalonesPage() {
         }),
       });
       setExito('Docente asignado al salón correctamente');
+      cargarDatos();
     } catch (err) {
       setError(err.message);
     }
