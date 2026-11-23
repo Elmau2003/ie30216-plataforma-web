@@ -1,6 +1,7 @@
 // frontend/src/App.jsx
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { fetchAPI } from './services/api';
 import Login from './pages/Login';
 import Sidebar from './components/Sidebar';
 import UsuariosPage from './pages/UsuariosPage';
@@ -15,6 +16,129 @@ import EstudianteComunicadosPage from './pages/EstudianteComunicadosPage';
 import DocenteIncidenciasPage from './pages/DocenteIncidenciasPage';
 import EstudianteIncidenciasPage from './pages/EstudianteIncidenciasPage';
 
+function ModalCambioPasswordObligatorio({ onCompletado, onLogout }) {
+  const [passwordActual, setPasswordActual] = useState('');
+  const [nuevaPassword, setNuevaPassword] = useState('');
+  const [confirmarPassword, setConfirmarPassword] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (nuevaPassword.length < 6) {
+      setError('La nueva contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
+    if (nuevaPassword !== confirmarPassword) {
+      setError('La nueva contraseña y su confirmación no coinciden.');
+      return;
+    }
+
+    if (nuevaPassword === passwordActual) {
+      setError('La nueva contraseña debe ser diferente a la clave temporal.');
+      return;
+    }
+
+    setGuardando(true);
+    try {
+      await fetchAPI('/auth/cambiar-password', {
+        method: 'POST',
+        body: JSON.stringify({ passwordActual, nuevaPassword }),
+      });
+      onCompletado();
+    } catch (err) {
+      setError(err.message || 'No se pudo actualizar la contraseña');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl border border-slate-200 space-y-4">
+        <div>
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+            Seguridad de Cuenta
+          </span>
+          <h3 className="text-lg font-bold text-slate-800 mt-2">
+            Debes cambiar tu contraseña
+          </h3>
+          <p className="text-xs text-slate-500 mt-1">
+            Por seguridad, debes establecer una contraseña personal antes de continuar usando la plataforma.
+          </p>
+        </div>
+
+        {error && (
+          <div className="p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">
+              Contraseña actual / temporal
+            </label>
+            <input
+              type="password"
+              value={passwordActual}
+              onChange={(e) => setPasswordActual(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">
+              Nueva contraseña (mín. 6 caracteres)
+            </label>
+            <input
+              type="password"
+              value={nuevaPassword}
+              onChange={(e) => setNuevaPassword(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">
+              Confirmar nueva contraseña
+            </label>
+            <input
+              type="password"
+              value={confirmarPassword}
+              onChange={(e) => setConfirmarPassword(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
+          </div>
+
+          <div className="flex justify-between items-center pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={onLogout}
+              className="text-xs text-slate-500 hover:text-red-600 font-medium"
+            >
+              Cerrar sesión
+            </button>
+            <button
+              type="submit"
+              disabled={guardando}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+            >
+              {guardando ? 'Guardando...' : 'Guardar nueva clave'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function MainLayout() {
   const { usuario, logout, cargando } = useAuth();
   const [tabActiva, setTabActiva] = useState('dashboard');
@@ -26,6 +150,21 @@ function MainLayout() {
   if (!usuario) {
     return <Login />;
   }
+
+  const handleCambioCompletado = () => {
+    // Si guardas el usuario en localStorage, actualizamos la bandera ahí también
+    try {
+      const guardado = localStorage.getItem('usuario');
+      if (guardado) {
+        const parsed = JSON.parse(guardado);
+        parsed.debe_cambiar_password = false;
+        localStorage.setItem('usuario', JSON.stringify(parsed));
+      }
+    } catch (_) {
+      // Ignorar si no se usa esa clave en localStorage
+    }
+    window.location.reload();
+  };
 
   return (
     <div className="flex min-h-screen bg-slate-100">
@@ -81,6 +220,13 @@ function MainLayout() {
           {tabActiva === 'incidencias-estudiante' && <EstudianteIncidenciasPage />}
         </main>
       </div>
+
+      {usuario.debe_cambiar_password && (
+        <ModalCambioPasswordObligatorio
+          onLogout={logout}
+          onCompletado={handleCambioCompletado}
+        />
+      )}
     </div>
   );
 }

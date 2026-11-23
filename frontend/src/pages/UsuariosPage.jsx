@@ -6,7 +6,13 @@ export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
-  
+  const [mensaje, setMensaje] = useState('');
+
+  // Campos de búsqueda para ubicar usuario a editar
+  const [filtroDni, setFiltroDni] = useState('');
+  const [filtroNombres, setFiltroNombres] = useState('');
+  const [filtroApellidos, setFiltroApellidos] = useState('');
+
   // Formulario Registro
   const [dni, setDni] = useState('');
   const [nombres, setNombres] = useState('');
@@ -16,13 +22,14 @@ export default function UsuariosPage() {
   const [rolNombre, setRolNombre] = useState('DOCENTE');
   const [creando, setCreando] = useState(false);
 
-  // Estado para Edición (Modal)
+  // Estado para Edición y Reseteo de Credenciales (Modal)
   const [usuarioEditar, setUsuarioEditar] = useState(null);
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
   const cargarUsuarios = async () => {
     try {
       const data = await fetchAPI('/users');
-      setUsuarios(data);
+      setUsuarios(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -37,6 +44,7 @@ export default function UsuariosPage() {
   const handleCrearUsuario = async (e) => {
     e.preventDefault();
     setError('');
+    setMensaje('');
     setCreando(true);
 
     try {
@@ -44,7 +52,12 @@ export default function UsuariosPage() {
         method: 'POST',
         body: JSON.stringify({ dni, nombres, apellidos, correo, password, rolNombre }),
       });
-      setDni(''); setNombres(''); setApellidos(''); setCorreo(''); setPassword('');
+      setDni('');
+      setNombres('');
+      setApellidos('');
+      setCorreo('');
+      setPassword('');
+      setMensaje('Usuario registrado exitosamente.');
       cargarUsuarios();
     } catch (err) {
       setError(err.message);
@@ -53,33 +66,55 @@ export default function UsuariosPage() {
     }
   };
 
+  const abrirModalEdicion = (user) => {
+    setError('');
+    setMensaje('');
+    setUsuarioEditar({
+      ...user,
+      nuevaPassword: '',
+      resetearAlDni: false,
+    });
+  };
+
   const handleGuardarEdicion = async (e) => {
     e.preventDefault();
+    if (!usuarioEditar) return;
+
     setError('');
+    setMensaje('');
+    setGuardandoEdicion(true);
 
     try {
-      await fetchAPI(`/users/${usuarioEditar.id}`, {
+      const res = await fetchAPI(`/users/${usuarioEditar.id}`, {
         method: 'PUT',
         body: JSON.stringify({
           nombres: usuarioEditar.nombres,
           apellidos: usuarioEditar.apellidos,
           correo: usuarioEditar.correo,
           rolNombre: usuarioEditar.rol,
+          nuevaPassword: usuarioEditar.nuevaPassword || '',
+          resetearAlDni: Boolean(usuarioEditar.resetearAlDni),
         }),
       });
+
+      setMensaje(res?.mensaje || 'Usuario actualizado correctamente.');
       setUsuarioEditar(null);
       cargarUsuarios();
     } catch (err) {
       setError(err.message);
+    } finally {
+      setGuardandoEdicion(false);
     }
   };
 
   const handleEliminarUsuario = async (id, dniNombre) => {
     if (!window.confirm(`¿Estás seguro de eliminar al usuario ${dniNombre}?`)) return;
     setError('');
+    setMensaje('');
 
     try {
       await fetchAPI(`/users/${id}`, { method: 'DELETE' });
+      setMensaje('Usuario eliminado correctamente.');
       cargarUsuarios();
     } catch (err) {
       setError(err.message);
@@ -87,6 +122,9 @@ export default function UsuariosPage() {
   };
 
   const handleToggleEstado = async (id, estadoActual) => {
+    setError('');
+    setMensaje('');
+
     try {
       await fetchAPI(`/users/${id}/estado`, {
         method: 'PATCH',
@@ -98,6 +136,28 @@ export default function UsuariosPage() {
     }
   };
 
+  const limpiarBusqueda = () => {
+    setFiltroDni('');
+    setFiltroNombres('');
+    setFiltroApellidos('');
+  };
+
+  // Solo se muestran resultados cuando el usuario ingresa al menos un criterio de búsqueda
+  const dniLimpio = filtroDni.trim().toLowerCase();
+  const nombresLimpio = filtroNombres.trim().toLowerCase();
+  const apellidosLimpio = filtroApellidos.trim().toLowerCase();
+
+  const hayBusquedaActiva = Boolean(dniLimpio || nombresLimpio || apellidosLimpio);
+
+  const usuariosCoincidentes = hayBusquedaActiva
+    ? usuarios.filter((user) => {
+        const coincideDni = !dniLimpio || String(user.dni || '').toLowerCase().includes(dniLimpio);
+        const coincideNombres = !nombresLimpio || String(user.nombres || '').toLowerCase().includes(nombresLimpio);
+        const coincideApellidos = !apellidosLimpio || String(user.apellidos || '').toLowerCase().includes(apellidosLimpio);
+        return coincideDni && coincideNombres && coincideApellidos;
+      })
+    : [];
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-slate-800">Gestión de Usuarios</h2>
@@ -108,33 +168,73 @@ export default function UsuariosPage() {
         </div>
       )}
 
+      {mensaje && (
+        <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 text-sm rounded">
+          {mensaje}
+        </div>
+      )}
+
       {/* Formulario de Registro */}
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <h3 className="text-md font-semibold text-slate-700 mb-4">Registrar Nuevo Usuario</h3>
         <form onSubmit={handleCrearUsuario} className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">DNI (Usuario)</label>
-            <input type="text" maxLength={8} value={dni} onChange={(e) => setDni(e.target.value)} required className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+            <input
+              type="text"
+              maxLength={8}
+              value={dni}
+              onChange={(e) => setDni(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Nombres</label>
-            <input type="text" value={nombres} onChange={(e) => setNombres(e.target.value)} required className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+            <input
+              type="text"
+              value={nombres}
+              onChange={(e) => setNombres(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Apellidos</label>
-            <input type="text" value={apellidos} onChange={(e) => setApellidos(e.target.value)} required className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+            <input
+              type="text"
+              value={apellidos}
+              onChange={(e) => setApellidos(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Correo Electrónico</label>
-            <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+            <input
+              type="email"
+              value={correo}
+              onChange={(e) => setCorreo(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Contraseña</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Rol de Usuario</label>
-            <select value={rolNombre} onChange={(e) => setRolNombre(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+            <select
+              value={rolNombre}
+              onChange={(e) => setRolNombre(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
               <option value="DOCENTE">DOCENTE</option>
               <option value="ESTUDIANTE">ESTUDIANTE</option>
               <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
@@ -142,79 +242,159 @@ export default function UsuariosPage() {
             </select>
           </div>
           <div className="md:col-span-3 flex justify-end">
-            <button type="submit" disabled={creando} className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2 rounded-lg text-sm shadow">
+            <button
+              type="submit"
+              disabled={creando}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2 rounded-lg text-sm shadow disabled:opacity-50"
+            >
               {creando ? 'Guardando...' : 'Registrar Usuario'}
             </button>
           </div>
         </form>
       </div>
 
-      {/* Tabla de Usuarios */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <table className="w-full text-left text-sm text-slate-600">
-          <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-            <tr>
-              <th className="p-4">DNI</th>
-              <th className="p-4">Nombres y Apellidos</th>
-              <th className="p-4">Correo</th>
-              <th className="p-4">Rol</th>
-              <th className="p-4">Estado</th>
-              <th className="p-4 text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {cargando ? (
-              <tr><td colSpan={6} className="p-4 text-center text-slate-400">Cargando usuarios...</td></tr>
-            ) : usuarios.map((user) => (
-              <tr key={user.id} className="hover:bg-slate-50">
-                <td className="p-4 font-mono">{user.dni}</td>
-                <td className="p-4 font-medium text-slate-800">{user.nombres} {user.apellidos}</td>
-                <td className="p-4 text-slate-500">{user.correo || '-'}</td>
-                <td className="p-4">
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    user.rol === 'DIRECTIVO' ? 'bg-purple-100 text-purple-800' :
-                    user.rol === 'DOCENTE' ? 'bg-blue-100 text-blue-800' :
-                    user.rol === 'ESTUDIANTE' ? 'bg-green-100 text-green-800' :
-                    'bg-slate-100 text-slate-800'
-                  }`}>
-                    {user.rol}
-                  </span>
-                </td>
-                <td className="p-4">
-                  <button
-                    onClick={() => handleToggleEstado(user.id, user.activo)}
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                      user.activo ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {user.activo ? 'Activo' : 'Inactivo'}
-                  </button>
-                </td>
-                <td className="p-4 text-center space-x-2">
-                  <button
-                    onClick={() => setUsuarioEditar(user)}
-                    className="px-2.5 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 rounded-md text-xs font-medium"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleEliminarUsuario(user.id, `${user.nombres} (${user.dni})`)}
-                    className="px-2.5 py-1 bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 rounded-md text-xs font-medium"
-                  >
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Buscador para Ubicar Usuario y Editar */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-md font-semibold text-slate-700">Buscar Usuario para Editar o Resetear Clave</h3>
+            <p className="text-xs text-slate-500">
+              Complete uno o más campos (DNI, nombres o apellidos) para mostrar únicamente las coincidencias.
+            </p>
+          </div>
+          {hayBusquedaActiva && (
+            <button
+              type="button"
+              onClick={limpiarBusqueda}
+              className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium self-start sm:self-auto"
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Buscar por DNI</label>
+            <input
+              type="text"
+              maxLength={8}
+              value={filtroDni}
+              onChange={(e) => setFiltroDni(e.target.value)}
+              placeholder="Ej. 74125896..."
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Buscar por Nombres</label>
+            <input
+              type="text"
+              value={filtroNombres}
+              onChange={(e) => setFiltroNombres(e.target.value)}
+              placeholder="Ej. Carlos..."
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Buscar por Apellidos</label>
+            <input
+              type="text"
+              value={filtroApellidos}
+              onChange={(e) => setFiltroApellidos(e.target.value)}
+              placeholder="Ej. Mendoza..."
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Resultados únicamente cuando hay criterios ingresados */}
+        {!hayBusquedaActiva ? (
+          <div className="p-6 text-center rounded-lg border border-dashed border-slate-200 bg-slate-50/60 text-xs text-slate-500">
+            Ingrese un DNI, nombre o apellido para buscar al usuario que desea editar.
+          </div>
+        ) : cargando ? (
+          <div className="p-6 text-center text-sm text-slate-400">Buscando coincidencias...</div>
+        ) : usuariosCoincidentes.length === 0 ? (
+          <div className="p-6 text-center rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-500">
+            No se encontraron usuarios que concuerden con los criterios ingresados.
+          </div>
+        ) : (
+          <div className="rounded-xl border border-slate-200 overflow-hidden">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                <tr>
+                  <th className="p-4">DNI</th>
+                  <th className="p-4">Nombres y Apellidos</th>
+                  <th className="p-4">Correo</th>
+                  <th className="p-4">Rol</th>
+                  <th className="p-4">Estado</th>
+                  <th className="p-4 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {usuariosCoincidentes.map((user) => (
+                  <tr key={user.id} className="hover:bg-slate-50">
+                    <td className="p-4 font-mono">{user.dni}</td>
+                    <td className="p-4 font-medium text-slate-800">
+                      {user.nombres} {user.apellidos}
+                    </td>
+                    <td className="p-4 text-slate-500">{user.correo || '-'}</td>
+                    <td className="p-4">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                          user.rol === 'DIRECTIVO'
+                            ? 'bg-purple-100 text-purple-800'
+                            : user.rol === 'DOCENTE'
+                            ? 'bg-blue-100 text-blue-800'
+                            : user.rol === 'ESTUDIANTE'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-slate-100 text-slate-800'
+                        }`}
+                      >
+                        {user.rol}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <button
+                        onClick={() => handleToggleEstado(user.id, user.activo)}
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                          user.activo ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {user.activo ? 'Activo' : 'Inactivo'}
+                      </button>
+                    </td>
+                    <td className="p-4 text-center space-x-2">
+                      <button
+                        onClick={() => abrirModalEdicion(user)}
+                        className="px-2.5 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 rounded-md text-xs font-medium"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleEliminarUsuario(user.id, `${user.nombres} (${user.dni})`)}
+                        className="px-2.5 py-1 bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 rounded-md text-xs font-medium"
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Modal de Edición */}
+      {/* Modal de Edición y Reseteo de Contraseña */}
       {usuarioEditar && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-lg shadow-xl border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-800 mb-4">Editar Usuario ({usuarioEditar.dni})</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-4">
+              Editar Usuario ({usuarioEditar.dni})
+            </h3>
             <form onSubmit={handleGuardarEdicion} className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">Nombres</label>
@@ -258,6 +438,46 @@ export default function UsuariosPage() {
                   <option value="DIRECTIVO">DIRECTIVO</option>
                 </select>
               </div>
+
+              {/* Bloque para restablecer contraseña */}
+              <div className="p-3.5 rounded-lg bg-amber-50/70 border border-amber-200 space-y-2.5">
+                <p className="text-xs font-bold text-amber-900 uppercase">
+                  Restablecer Contraseña (Opcional)
+                </p>
+
+                <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(usuarioEditar.resetearAlDni)}
+                    onChange={(e) =>
+                      setUsuarioEditar({
+                        ...usuarioEditar,
+                        resetearAlDni: e.target.checked,
+                        nuevaPassword: e.target.checked ? '' : usuarioEditar.nuevaPassword,
+                      })
+                    }
+                  />
+                  Restablecer contraseña temporal al DNI ({usuarioEditar.dni})
+                </label>
+
+                {!usuarioEditar.resetearAlDni && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      Nueva contraseña (dejar vacío para mantener la actual)
+                    </label>
+                    <input
+                      type="password"
+                      value={usuarioEditar.nuevaPassword || ''}
+                      onChange={(e) =>
+                        setUsuarioEditar({ ...usuarioEditar, nuevaPassword: e.target.value })
+                      }
+                      placeholder="Mínimo 6 caracteres..."
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -268,9 +488,10 @@ export default function UsuariosPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"
+                  disabled={guardandoEdicion}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50"
                 >
-                  Guardar Cambios
+                  {guardandoEdicion ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
               </div>
             </form>
