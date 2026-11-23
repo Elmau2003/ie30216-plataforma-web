@@ -1,7 +1,8 @@
 // frontend/src/App.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { fetchAPI } from './services/api';
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Sidebar from './components/Sidebar';
 import UsuariosPage from './pages/UsuariosPage';
@@ -47,6 +48,10 @@ const TABS_POR_ROL = {
     'incidencias-estudiante',
   ],
 };
+
+function esRutaIntranet(hash) {
+  return String(hash || '').startsWith('#/intranet');
+}
 
 function ModalCambioPasswordObligatorio({ onCompletado, onLogout }) {
   const [passwordActual, setPasswordActual] = useState('');
@@ -174,19 +179,57 @@ function ModalCambioPasswordObligatorio({ onCompletado, onLogout }) {
 function MainLayout() {
   const { usuario, logout, cargando } = useAuth();
   const [tabActiva, setTabActiva] = useState('dashboard');
+  const [enIntranet, setEnIntranet] = useState(() => esRutaIntranet(window.location.hash));
+
+  useEffect(() => {
+    const manejarCambioHash = () => {
+      setEnIntranet(esRutaIntranet(window.location.hash));
+    };
+
+    window.addEventListener('hashchange', manejarCambioHash);
+    return () => window.removeEventListener('hashchange', manejarCambioHash);
+  }, []);
+
+  // Mantener el hash sincronizado cuando hay sesión activa
+  useEffect(() => {
+    if (usuario && !esRutaIntranet(window.location.hash)) {
+      window.location.hash = '#/intranet';
+    }
+  }, [usuario]);
 
   // Siempre ir al panel principal al iniciar sesión, cambiar de usuario/rol o refrescar la página
   useEffect(() => {
     setTabActiva('dashboard');
   }, [usuario?.id, usuario?.rol]);
 
+  const irAIntranet = useCallback(() => {
+    window.location.hash = '#/intranet';
+    setEnIntranet(true);
+  }, []);
+
+  const irAInicio = useCallback(() => {
+    window.location.hash = '#/';
+    setEnIntranet(false);
+  }, []);
+
   if (cargando) {
     return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
   }
 
-  if (!usuario) {
-    return <Login />;
+  // Si no hay sesión y no está en #/intranet, mostrar el landing institucional
+  if (!usuario && !enIntranet) {
+    return <LandingPage onAccederIntranet={irAIntranet} />;
   }
+
+  // Si está en #/intranet pero sin sesión iniciada, mostrar Login
+  if (!usuario) {
+    return <Login onVolverInicio={irAInicio} />;
+  }
+
+  const handleCerrarSesion = () => {
+    logout();
+    irAInicio();
+  };
 
   const rolActual = String(usuario.rol || '').toUpperCase();
   const tabsPermitidos = TABS_POR_ROL[rolActual] || ['dashboard'];
@@ -203,6 +246,7 @@ function MainLayout() {
     } catch (_) {
       // Ignorar si no se usa esa clave en localStorage
     }
+    window.location.hash = '#/intranet';
     window.location.reload();
   };
 
@@ -222,7 +266,7 @@ function MainLayout() {
               <p className="text-xs text-slate-500">{usuario.rol}</p>
             </div>
             <button
-              onClick={logout}
+              onClick={handleCerrarSesion}
               className="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-lg border border-red-200 font-medium transition"
             >
               Cerrar sesión
@@ -267,7 +311,7 @@ function MainLayout() {
 
       {usuario.debe_cambiar_password && (
         <ModalCambioPasswordObligatorio
-          onLogout={logout}
+          onLogout={handleCerrarSesion}
           onCompletado={handleCambioCompletado}
         />
       )}
