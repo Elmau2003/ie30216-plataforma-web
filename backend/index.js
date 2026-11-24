@@ -12,6 +12,7 @@ const attendanceRoutes = require('./routes/attendanceRoutes');
 const gradeRoutes = require('./routes/gradeRoutes');
 const communicationRoutes = require('./routes/communicationRoutes');
 const incidentRoutes = require('./routes/incidentRoutes');
+const calendarRoutes = require('./routes/calendarRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -28,6 +29,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/grades', gradeRoutes);
 app.use('/api/communications', communicationRoutes);
 app.use('/api/incidents', incidentRoutes);
+app.use('/api/calendario', calendarRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

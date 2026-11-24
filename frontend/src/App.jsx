@@ -18,6 +18,7 @@ import DocenteIncidenciasPage from './pages/DocenteIncidenciasPage';
 import EstudianteIncidenciasPage from './pages/EstudianteIncidenciasPage';
 import AdminMesaPartesPage from './pages/AdminMesaPartesPage';
 import AdminConsultasPage from './pages/AdminConsultasPage';
+import CalendarioAcademicoPage from './pages/CalendarioAcademicoPage';
 
 const TITULO_LANDING = 'I.E. N.° 30216 "Sagrado Corazón de María"';
 const TITULO_INTRANET = 'Intranet';
@@ -29,11 +30,13 @@ const TABS_POR_ROL = {
     'salones',
     'comunicados-directivo',
     'solicitudes-directivo',
+    'calendario-academico',
   ],
   ADMINISTRATIVO: [
     'dashboard',
     'mesa-partes',
     'consultas-admin',
+    'calendario-academico',
   ],
   DOCENTE: [
     'dashboard',
@@ -41,6 +44,7 @@ const TABS_POR_ROL = {
     'notas',
     'tramites-docente',
     'incidencias-docente',
+    'calendario-academico',
   ],
   ESTUDIANTE: [
     'dashboard',
@@ -303,6 +307,7 @@ function MainLayout() {
           {tabSegura === 'solicitudes-directivo' && <DirectivoSolicitudesPage />}
           {tabSegura === 'tramites-docente' && <DocenteTramitesPage />}
           {tabSegura === 'incidencias-docente' && <DocenteIncidenciasPage />}
+          {tabSegura === 'calendario-academico' && <CalendarioAcademicoPage />}
 
           {/* Vistas Administrativo (Mesa de Partes y Consultas Generales) */}
           {tabSegura === 'mesa-partes' && <AdminMesaPartesPage />}

@@ -33,6 +33,11 @@ export default function Login() {
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
         <div className="text-center mb-6">
+          <img
+            src="/images/institucion/logo.png"
+            alt="Insignia I.E. 30216"
+            className="w-20 h-20 mx-auto mb-3 object-contain"
+          />
           <h1 className="text-2xl font-bold text-slate-800">I.E. 30216</h1>
           <p className="text-sm font-medium text-slate-500">Sagrado Corazón de María</p>
           <span className="inline-block mt-2 px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">

@@ -7,6 +7,7 @@ export default function Sidebar({ rol, tabActiva, setTabActiva }) {
       { id: 'salones', nombre: 'Salones y Matrículas' },
       { id: 'comunicados-directivo', nombre: 'Comunicados Oficiales' },
       { id: 'solicitudes-directivo', nombre: 'Solicitudes Recibidas' },
+      { id: 'calendario-academico', nombre: 'Calendario Académico' },
     ],
     DOCENTE: [
       { id: 'dashboard', nombre: 'Panel Principal' },
@@ -14,6 +15,7 @@ export default function Sidebar({ rol, tabActiva, setTabActiva }) {
       { id: 'notas', nombre: 'Registro de Calificaciones' },
       { id: 'tramites-docente', nombre: 'Comunicados y Trámites' },
       { id: 'incidencias-docente', nombre: 'Registro de Incidencias' },
+      { id: 'calendario-academico', nombre: 'Calendario Académico' },
     ],
     ESTUDIANTE: [
       { id: 'dashboard', nombre: 'Panel Principal' },
@@ -26,17 +28,30 @@ export default function Sidebar({ rol, tabActiva, setTabActiva }) {
       { id: 'dashboard', nombre: 'Panel Principal' },
       { id: 'mesa-partes', nombre: 'Mesa de Partes (Externos)' },
       { id: 'consultas-admin', nombre: 'Consultas Generales' },
+      { id: 'calendario-academico', nombre: 'Calendario Académico' },
     ],
   };
 
-  const opciones = opcionesMenu[rol] || [];
+  const rolNormalizado = String(rol || '').toUpperCase();
+  const opciones = opcionesMenu[rolNormalizado] || [];
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 min-h-screen p-4 flex flex-col justify-between">
       <div>
-        <div className="mb-8 px-2">
-          <h1 className="text-xl font-bold text-white tracking-wide">I.E. 30216</h1>
-          <p className="text-xs text-slate-400">Sagrado Corazón de María</p>
+        <div className="mb-8 px-2 flex items-center gap-3">
+          <img
+            src="/images/institucion/logo.png"
+            alt="Insignia I.E. 30216"
+            className="w-11 h-11 object-contain shrink-0"
+          />
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-white tracking-wide leading-tight">
+              I.E. 30216
+            </h1>
+            <p className="text-xs text-slate-400 leading-snug">
+              Sagrado Corazón de María
+            </p>
+          </div>
         </div>
 
         <nav className="space-y-1">
