@@ -159,26 +159,26 @@ export default function UsuariosPage() {
     : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <h2 className="text-xl font-bold text-slate-800">Gestión de Usuarios</h2>
 
       {error && (
-        <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded">
+        <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded break-words">
           {error}
         </div>
       )}
 
       {mensaje && (
-        <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 text-sm rounded">
+        <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 text-sm rounded break-words">
           {mensaje}
         </div>
       )}
 
       {/* Formulario de Registro */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+      <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm min-w-0">
         <h3 className="text-md font-semibold text-slate-700 mb-4">Registrar Nuevo Usuario</h3>
         <form onSubmit={handleCrearUsuario} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
+          <div className="min-w-0">
             <label className="block text-xs font-medium text-slate-600 mb-1">DNI (Usuario)</label>
             <input
               type="text"
@@ -186,54 +186,54 @@ export default function UsuariosPage() {
               value={dni}
               onChange={(e) => setDni(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="block text-xs font-medium text-slate-600 mb-1">Nombres</label>
             <input
               type="text"
               value={nombres}
               onChange={(e) => setNombres(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="block text-xs font-medium text-slate-600 mb-1">Apellidos</label>
             <input
               type="text"
               value={apellidos}
               onChange={(e) => setApellidos(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="block text-xs font-medium text-slate-600 mb-1">Correo Electrónico</label>
             <input
               type="email"
               value={correo}
               onChange={(e) => setCorreo(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="block text-xs font-medium text-slate-600 mb-1">Contraseña</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="block text-xs font-medium text-slate-600 mb-1">Rol de Usuario</label>
             <select
               value={rolNombre}
               onChange={(e) => setRolNombre(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
             >
               <option value="DOCENTE">DOCENTE</option>
               <option value="ESTUDIANTE">ESTUDIANTE</option>
@@ -245,7 +245,7 @@ export default function UsuariosPage() {
             <button
               type="submit"
               disabled={creando}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2 rounded-lg text-sm shadow disabled:opacity-50"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2 rounded-lg text-sm shadow disabled:opacity-50 cursor-pointer"
             >
               {creando ? 'Guardando...' : 'Registrar Usuario'}
             </button>
@@ -254,9 +254,9 @@ export default function UsuariosPage() {
       </div>
 
       {/* Buscador para Ubicar Usuario y Editar */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+      <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 min-w-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
+          <div className="min-w-0">
             <h3 className="text-md font-semibold text-slate-700">Buscar Usuario para Editar o Resetear Clave</h3>
             <p className="text-xs text-slate-500">
               Complete uno o más campos (DNI, nombres o apellidos) para mostrar únicamente las coincidencias.
@@ -266,7 +266,7 @@ export default function UsuariosPage() {
             <button
               type="button"
               onClick={limpiarBusqueda}
-              className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium self-start sm:self-auto"
+              className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium self-start sm:self-auto cursor-pointer shrink-0"
             >
               Limpiar filtros
             </button>
@@ -274,7 +274,7 @@ export default function UsuariosPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
+          <div className="min-w-0">
             <label className="block text-xs font-medium text-slate-600 mb-1">Buscar por DNI</label>
             <input
               type="text"
@@ -282,29 +282,29 @@ export default function UsuariosPage() {
               value={filtroDni}
               onChange={(e) => setFiltroDni(e.target.value)}
               placeholder="Ej. 74125896..."
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+              className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="block text-xs font-medium text-slate-600 mb-1">Buscar por Nombres</label>
             <input
               type="text"
               value={filtroNombres}
               onChange={(e) => setFiltroNombres(e.target.value)}
               placeholder="Ej. Carlos..."
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="block text-xs font-medium text-slate-600 mb-1">Buscar por Apellidos</label>
             <input
               type="text"
               value={filtroApellidos}
               onChange={(e) => setFiltroApellidos(e.target.value)}
               placeholder="Ej. Mendoza..."
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
             />
           </div>
         </div>
@@ -321,27 +321,27 @@ export default function UsuariosPage() {
             No se encontraron usuarios que concuerden con los criterios ingresados.
           </div>
         ) : (
-          <div className="rounded-xl border border-slate-200 overflow-hidden">
-            <table className="w-full text-left text-sm text-slate-600">
+          <div className="w-full rounded-xl border border-slate-200 overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-600 min-w-[640px]">
               <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
                 <tr>
-                  <th className="p-4">DNI</th>
-                  <th className="p-4">Nombres y Apellidos</th>
-                  <th className="p-4">Correo</th>
-                  <th className="p-4">Rol</th>
-                  <th className="p-4">Estado</th>
-                  <th className="p-4 text-center">Acciones</th>
+                  <th className="p-3 sm:p-4 whitespace-nowrap">DNI</th>
+                  <th className="p-3 sm:p-4 whitespace-nowrap">Nombres y Apellidos</th>
+                  <th className="p-3 sm:p-4 whitespace-nowrap">Correo</th>
+                  <th className="p-3 sm:p-4 whitespace-nowrap">Rol</th>
+                  <th className="p-3 sm:p-4 whitespace-nowrap">Estado</th>
+                  <th className="p-3 sm:p-4 text-center whitespace-nowrap">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {usuariosCoincidentes.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50">
-                    <td className="p-4 font-mono">{user.dni}</td>
-                    <td className="p-4 font-medium text-slate-800">
+                    <td className="p-3 sm:p-4 font-mono whitespace-nowrap">{user.dni}</td>
+                    <td className="p-3 sm:p-4 font-medium text-slate-800 whitespace-nowrap">
                       {user.nombres} {user.apellidos}
                     </td>
-                    <td className="p-4 text-slate-500">{user.correo || '-'}</td>
-                    <td className="p-4">
+                    <td className="p-3 sm:p-4 text-slate-500 whitespace-nowrap">{user.correo || '-'}</td>
+                    <td className="p-3 sm:p-4 whitespace-nowrap">
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                           user.rol === 'DIRECTIVO'
@@ -356,29 +356,34 @@ export default function UsuariosPage() {
                         {user.rol}
                       </span>
                     </td>
-                    <td className="p-4">
+                    <td className="p-3 sm:p-4 whitespace-nowrap">
                       <button
+                        type="button"
                         onClick={() => handleToggleEstado(user.id, user.activo)}
-                        className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-semibold cursor-pointer ${
                           user.activo ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
                         }`}
                       >
                         {user.activo ? 'Activo' : 'Inactivo'}
                       </button>
                     </td>
-                    <td className="p-4 text-center space-x-2">
-                      <button
-                        onClick={() => abrirModalEdicion(user)}
-                        className="px-2.5 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 rounded-md text-xs font-medium"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleEliminarUsuario(user.id, `${user.nombres} (${user.dni})`)}
-                        className="px-2.5 py-1 bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 rounded-md text-xs font-medium"
-                      >
-                        Eliminar
-                      </button>
+                    <td className="p-3 sm:p-4 text-center whitespace-nowrap">
+                      <div className="inline-flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => abrirModalEdicion(user)}
+                          className="px-2.5 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 rounded-md text-xs font-medium cursor-pointer"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleEliminarUsuario(user.id, `${user.nombres} (${user.dni})`)}
+                          className="px-2.5 py-1 bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 rounded-md text-xs font-medium cursor-pointer"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -390,47 +395,47 @@ export default function UsuariosPage() {
 
       {/* Modal de Edición y Reseteo de Contraseña */}
       {usuarioEditar && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg shadow-xl border border-slate-200">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-xl p-5 sm:p-6 w-full max-w-lg shadow-xl border border-slate-200 my-auto min-w-0">
             <h3 className="text-lg font-bold text-slate-800 mb-4">
               Editar Usuario ({usuarioEditar.dni})
             </h3>
             <form onSubmit={handleGuardarEdicion} className="space-y-4">
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Nombres</label>
                 <input
                   type="text"
                   value={usuarioEditar.nombres}
                   onChange={(e) => setUsuarioEditar({ ...usuarioEditar, nombres: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Apellidos</label>
                 <input
                   type="text"
                   value={usuarioEditar.apellidos}
                   onChange={(e) => setUsuarioEditar({ ...usuarioEditar, apellidos: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Correo Electrónico</label>
                 <input
                   type="email"
                   value={usuarioEditar.correo || ''}
                   onChange={(e) => setUsuarioEditar({ ...usuarioEditar, correo: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Rol</label>
                 <select
                   value={usuarioEditar.rol}
                   onChange={(e) => setUsuarioEditar({ ...usuarioEditar, rol: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
                 >
                   <option value="DOCENTE">DOCENTE</option>
                   <option value="ESTUDIANTE">ESTUDIANTE</option>
@@ -440,7 +445,7 @@ export default function UsuariosPage() {
               </div>
 
               {/* Bloque para restablecer contraseña */}
-              <div className="p-3.5 rounded-lg bg-amber-50/70 border border-amber-200 space-y-2.5">
+              <div className="p-3.5 rounded-lg bg-amber-50/70 border border-amber-200 space-y-2.5 min-w-0">
                 <p className="text-xs font-bold text-amber-900 uppercase">
                   Restablecer Contraseña (Opcional)
                 </p>
@@ -457,11 +462,11 @@ export default function UsuariosPage() {
                       })
                     }
                   />
-                  Restablecer contraseña temporal al DNI ({usuarioEditar.dni})
+                  <span>Restablecer contraseña temporal al DNI ({usuarioEditar.dni})</span>
                 </label>
 
                 {!usuarioEditar.resetearAlDni && (
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-xs font-medium text-slate-600 mb-1">
                       Nueva contraseña (dejar vacío para mantener la actual)
                     </label>
@@ -472,24 +477,24 @@ export default function UsuariosPage() {
                         setUsuarioEditar({ ...usuarioEditar, nuevaPassword: e.target.value })
                       }
                       placeholder="Mínimo 6 caracteres..."
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                      className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
                     />
                   </div>
                 )}
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setUsuarioEditar(null)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium"
+                  className="w-full sm:w-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={guardandoEdicion}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+                  className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 cursor-pointer"
                 >
                   {guardandoEdicion ? 'Guardando...' : 'Guardar Cambios'}
                 </button>

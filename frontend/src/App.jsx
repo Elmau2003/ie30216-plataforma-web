@@ -101,8 +101,8 @@ function ModalCambioPasswordObligatorio({ onCompletado, onLogout }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl border border-slate-200 space-y-4">
+    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-xl p-5 sm:p-6 w-full max-w-md shadow-2xl border border-slate-200 space-y-4 my-auto min-w-0">
         <div>
           <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
             Seguridad de Cuenta
@@ -116,13 +116,13 @@ function ModalCambioPasswordObligatorio({ onCompletado, onLogout }) {
         </div>
 
         {error && (
-          <div className="p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded">
+          <div className="p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded break-words">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
+          <div className="min-w-0">
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Contraseña actual / temporal
             </label>
@@ -131,11 +131,11 @@ function ModalCambioPasswordObligatorio({ onCompletado, onLogout }) {
               value={passwordActual}
               onChange={(e) => setPasswordActual(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Nueva contraseña (mín. 6 caracteres)
             </label>
@@ -144,11 +144,11 @@ function ModalCambioPasswordObligatorio({ onCompletado, onLogout }) {
               value={nuevaPassword}
               onChange={(e) => setNuevaPassword(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Confirmar nueva contraseña
             </label>
@@ -157,22 +157,22 @@ function ModalCambioPasswordObligatorio({ onCompletado, onLogout }) {
               value={confirmarPassword}
               onChange={(e) => setConfirmarPassword(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
             />
           </div>
 
-          <div className="flex justify-between items-center pt-3 border-t border-slate-100">
+          <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-2 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={onLogout}
-              className="text-xs text-slate-500 hover:text-red-600 font-medium"
+              className="text-xs text-slate-500 hover:text-red-600 font-medium py-2 sm:py-0 text-center sm:text-left cursor-pointer"
             >
               Cerrar sesión
             </button>
             <button
               type="submit"
               disabled={guardando}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 cursor-pointer"
             >
               {guardando ? 'Guardando...' : 'Guardar nueva clave'}
             </button>
@@ -186,6 +186,7 @@ function ModalCambioPasswordObligatorio({ onCompletado, onLogout }) {
 function MainLayout() {
   const { usuario, logout, cargando } = useAuth();
   const [tabActiva, setTabActiva] = useState('dashboard');
+  const [abiertoMovil, setAbiertoMovil] = useState(false);
   const [enIntranet, setEnIntranet] = useState(() => esRutaIntranet(window.location.hash));
 
   const estaEnLanding = !usuario && !enIntranet;
@@ -203,16 +204,15 @@ function MainLayout() {
     return () => window.removeEventListener('hashchange', manejarCambioHash);
   }, []);
 
-  // Mantener el hash sincronizado cuando hay sesión activa
   useEffect(() => {
     if (usuario && !esRutaIntranet(window.location.hash)) {
       window.location.hash = '#/intranet';
     }
   }, [usuario]);
 
-  // Siempre ir al panel principal al iniciar sesión, cambiar de usuario/rol o refrescar la página
   useEffect(() => {
     setTabActiva('dashboard');
+    setAbiertoMovil(false);
   }, [usuario?.id, usuario?.rol]);
 
   const irAIntranet = useCallback(() => {
@@ -229,17 +229,16 @@ function MainLayout() {
     return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
   }
 
-  // Si no hay sesión y no está en #/intranet, mostrar el landing institucional
   if (!usuario && !enIntranet) {
     return <LandingPage onAccederIntranet={irAIntranet} />;
   }
 
-  // Si está en #/intranet pero sin sesión iniciada, mostrar Login
   if (!usuario) {
     return <Login onVolverInicio={irAInicio} />;
   }
 
   const handleCerrarSesion = () => {
+    setAbiertoMovil(false);
     logout();
     irAInicio();
   };
@@ -265,22 +264,45 @@ function MainLayout() {
 
   return (
     <div className="flex min-h-screen bg-slate-100">
-      <Sidebar rol={usuario.rol} tabActiva={tabSegura} setTabActiva={setTabActiva} />
+      <Sidebar
+        rol={usuario.rol}
+        tabActiva={tabSegura}
+        setTabActiva={setTabActiva}
+        abiertoMovil={abiertoMovil}
+        setAbiertoMovil={setAbiertoMovil}
+      />
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col">
         {/* Header superior */}
-        <header className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-xs">
-          <h1 className="text-lg font-bold text-slate-800">
-            Intranet Institucional
-          </h1>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-semibold text-slate-800">{usuario.nombres} {usuario.apellidos}</p>
+        <header className="bg-white border-b border-slate-200 px-3 sm:px-6 md:px-8 py-3 sm:py-4 flex justify-between items-center gap-2 shadow-xs min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setAbiertoMovil(true)}
+              className="md:hidden p-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer shrink-0"
+              aria-label="Abrir menú"
+            >
+              <span className="block w-4 h-0.5 bg-slate-700 mb-1" />
+              <span className="block w-4 h-0.5 bg-slate-700 mb-1" />
+              <span className="block w-4 h-0.5 bg-slate-700" />
+            </button>
+            <h1 className="text-sm sm:text-lg font-bold text-slate-800 truncate">
+              <span className="sm:hidden">Intranet</span>
+              <span className="hidden sm:inline">Intranet Institucional</span>
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <div className="hidden sm:block text-right min-w-0">
+              <p className="text-sm font-semibold text-slate-800 truncate max-w-[220px]">
+                {usuario.nombres} {usuario.apellidos}
+              </p>
               <p className="text-xs text-slate-500">{usuario.rol}</p>
             </div>
             <button
+              type="button"
               onClick={handleCerrarSesion}
-              className="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-lg border border-red-200 font-medium transition"
+              className="text-[11px] sm:text-xs bg-red-50 text-red-600 hover:bg-red-100 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-red-200 font-medium transition cursor-pointer whitespace-nowrap shrink-0"
             >
               Cerrar sesión
             </button>
@@ -288,10 +310,12 @@ function MainLayout() {
         </header>
 
         {/* Área de Contenido */}
-        <main className="p-8 flex-1">
+        <main className="p-3 sm:p-6 md:p-8 flex-1 min-w-0">
           {tabSegura === 'dashboard' && (
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-800 mb-2">¡Bienvenido(a), {usuario.nombres}!</h2>
+            <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm min-w-0">
+              <h2 className="text-base sm:text-lg font-bold text-slate-800 mb-2">
+                ¡Bienvenido(a), {usuario.nombres}!
+              </h2>
               <p className="text-slate-600 text-sm">
                 Selecciona una opción del menú lateral para comenzar a gestionar el sistema de la I.E. 30216.
               </p>

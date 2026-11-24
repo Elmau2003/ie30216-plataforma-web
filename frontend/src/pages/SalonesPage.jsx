@@ -31,7 +31,7 @@ export default function SalonesPage() {
         fetchAPI('/users'),
       ]);
 
-      setSalones(resSalones);
+      setSalones(Array.isArray(resSalones) ? resSalones : []);
       setDocentes(resUsuarios.filter((u) => u.rol === 'DOCENTE' && u.activo));
       setEstudiantes(resUsuarios.filter((u) => u.rol === 'ESTUDIANTE' && u.activo));
     } catch (err) {
@@ -58,7 +58,7 @@ export default function SalonesPage() {
     try {
       await fetchAPI('/classrooms', {
         method: 'POST',
-        body: JSON.stringify({ grado, seccion, anioEscolar: parseInt(anioEscolar) }),
+        body: JSON.stringify({ grado, seccion, anioEscolar: parseInt(anioEscolar, 10) }),
       });
       setExito('Salón creado exitosamente');
       cargarDatos();
@@ -81,8 +81,8 @@ export default function SalonesPage() {
       await fetchAPI('/classrooms/asignar-docente', {
         method: 'POST',
         body: JSON.stringify({
-          salonId: parseInt(salonDocenteId),
-          docenteId: parseInt(docenteId),
+          salonId: parseInt(salonDocenteId, 10),
+          docenteId: parseInt(docenteId, 10),
         }),
       });
       setExito('Docente asignado al salón correctamente');
@@ -106,8 +106,8 @@ export default function SalonesPage() {
       await fetchAPI('/classrooms/matricular', {
         method: 'POST',
         body: JSON.stringify({
-          salonId: parseInt(salonMatriculaId),
-          estudianteId: parseInt(estudianteId),
+          salonId: parseInt(salonMatriculaId, 10),
+          estudianteId: parseInt(estudianteId, 10),
         }),
       });
       setExito('Estudiante matriculado exitosamente');
@@ -118,33 +118,33 @@ export default function SalonesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <h2 className="text-xl font-bold text-slate-800">Gestión de Salones y Matrículas</h2>
 
       {error && (
-        <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded">
+        <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded break-words">
           {error}
         </div>
       )}
 
       {exito && (
-        <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 text-sm rounded">
+        <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 text-sm rounded break-words">
           {exito}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0">
         {/* Formulario 1: Crear Salón */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div>
+        <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between min-w-0">
+          <div className="min-w-0">
             <h3 className="text-md font-semibold text-slate-700 mb-4">1. Crear Nuevo Salón</h3>
             <form onSubmit={handleCrearSalon} className="space-y-4">
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Grado</label>
                 <select
                   value={grado}
                   onChange={(e) => setGrado(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
                 >
                   <option value="1ro">1ro de Primaria</option>
                   <option value="2do">2do de Primaria</option>
@@ -154,7 +154,7 @@ export default function SalonesPage() {
                   <option value="6to">6to de Primaria</option>
                 </select>
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Sección</label>
                 <input
                   type="text"
@@ -163,22 +163,22 @@ export default function SalonesPage() {
                   onChange={(e) => setSeccion(e.target.value)}
                   required
                   placeholder="Ej: A, B, Única"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Año Escolar</label>
                 <input
                   type="number"
                   value={anioEscolar}
                   onChange={(e) => setAnioEscolar(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
                 />
               </div>
               <button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg text-sm shadow-xs transition"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg text-sm shadow-xs transition cursor-pointer"
               >
                 Crear Salón
               </button>
@@ -187,16 +187,16 @@ export default function SalonesPage() {
         </div>
 
         {/* Formulario 2: Asignar Docente */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div>
+        <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between min-w-0">
+          <div className="min-w-0">
             <h3 className="text-md font-semibold text-slate-700 mb-4">2. Asignar Docente a Salón</h3>
             <form onSubmit={handleAsignarDocente} className="space-y-4">
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Seleccionar Salón</label>
                 <select
                   value={salonDocenteId}
                   onChange={(e) => setSalonDocenteId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
                 >
                   <option value="">-- Seleccionar --</option>
                   {salones.map((s) => (
@@ -206,12 +206,12 @@ export default function SalonesPage() {
                   ))}
                 </select>
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Seleccionar Docente</label>
                 <select
                   value={docenteId}
                   onChange={(e) => setDocenteId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
                 >
                   <option value="">-- Seleccionar --</option>
                   {docentes.map((d) => (
@@ -223,7 +223,7 @@ export default function SalonesPage() {
               </div>
               <button
                 type="submit"
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 rounded-lg text-sm shadow-xs transition"
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 rounded-lg text-sm shadow-xs transition cursor-pointer"
               >
                 Asignar Docente
               </button>
@@ -232,16 +232,16 @@ export default function SalonesPage() {
         </div>
 
         {/* Formulario 3: Matricular Estudiante */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div>
+        <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between min-w-0">
+          <div className="min-w-0">
             <h3 className="text-md font-semibold text-slate-700 mb-4">3. Matricular Estudiante</h3>
             <form onSubmit={handleMatricularEstudiante} className="space-y-4">
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Seleccionar Salón</label>
                 <select
                   value={salonMatriculaId}
                   onChange={(e) => setSalonMatriculaId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
                 >
                   <option value="">-- Seleccionar --</option>
                   {salones.map((s) => (
@@ -251,12 +251,12 @@ export default function SalonesPage() {
                   ))}
                 </select>
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Seleccionar Estudiante</label>
                 <select
                   value={estudianteId}
                   onChange={(e) => setEstudianteId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
                 >
                   <option value="">-- Seleccionar --</option>
                   {estudiantes.map((est) => (
@@ -268,7 +268,7 @@ export default function SalonesPage() {
               </div>
               <button
                 type="submit"
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg text-sm shadow-xs transition"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg text-sm shadow-xs transition cursor-pointer"
               >
                 Matricular Estudiante
               </button>
@@ -278,60 +278,64 @@ export default function SalonesPage() {
       </div>
 
       {/* Tabla de Salones Existentes */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden mt-6">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs mt-6 min-w-0 overflow-hidden">
         <div className="p-4 border-b border-slate-200 bg-slate-50">
           <h3 className="text-md font-semibold text-slate-700">Lista de Salones Registrados</h3>
         </div>
-        <table className="w-full text-left text-sm text-slate-600">
-          <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
-            <tr>
-              <th className="p-4">ID</th>
-              <th className="p-4">Grado y Sección</th>
-              <th className="p-4">Docente(s) Asignado(s)</th>
-              <th className="p-4">Año Escolar</th>
-              <th className="p-4 text-center">Total Estudiantes</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {cargando ? (
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600 min-w-[600px]">
+            <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
               <tr>
-                <td colSpan={5} className="p-4 text-center text-slate-400">
-                  Cargando salones...
-                </td>
+                <th className="p-3 sm:p-4 whitespace-nowrap">ID</th>
+                <th className="p-3 sm:p-4 whitespace-nowrap">Grado y Sección</th>
+                <th className="p-3 sm:p-4 whitespace-nowrap">Docente(s) Asignado(s)</th>
+                <th className="p-3 sm:p-4 whitespace-nowrap">Año Escolar</th>
+                <th className="p-3 sm:p-4 text-center whitespace-nowrap">Total Estudiantes</th>
               </tr>
-            ) : salones.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="p-4 text-center text-slate-400">
-                  No hay salones registrados.
-                </td>
-              </tr>
-            ) : (
-              salones.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-50">
-                  <td className="p-4 font-mono text-xs">{s.id}</td>
-                  <td className="p-4 font-medium text-slate-800">
-                    {s.grado} "{s.seccion}"
-                  </td>
-                  <td className="p-4 text-slate-700">
-                    <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-medium ${
-                      s.docentes_asignados === 'Sin docente asignado' 
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200' 
-                        : 'bg-purple-50 text-purple-700 border border-purple-200'
-                    }`}>
-                      {s.docentes_asignados}
-                    </span>
-                  </td>
-                  <td className="p-4 font-mono">{s.anio_escolar}</td>
-                  <td className="p-4 text-center">
-                    <span className="px-3 py-1 bg-blue-100 text-blue-800 font-bold rounded-full text-xs">
-                      {s.total_estudiantes || 0} estudiantes
-                    </span>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {cargando ? (
+                <tr>
+                  <td colSpan={5} className="p-4 text-center text-slate-400">
+                    Cargando salones...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : salones.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-4 text-center text-slate-400">
+                    No hay salones registrados.
+                  </td>
+                </tr>
+              ) : (
+                salones.map((s) => (
+                  <tr key={s.id} className="hover:bg-slate-50">
+                    <td className="p-3 sm:p-4 font-mono text-xs whitespace-nowrap">{s.id}</td>
+                    <td className="p-3 sm:p-4 font-medium text-slate-800 whitespace-nowrap">
+                      {s.grado} "{s.seccion}"
+                    </td>
+                    <td className="p-3 sm:p-4 text-slate-700 whitespace-nowrap">
+                      <span
+                        className={`inline-block px-2.5 py-1 rounded-md text-xs font-medium ${
+                          s.docentes_asignados === 'Sin docente asignado'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-purple-50 text-purple-700 border border-purple-200'
+                        }`}
+                      >
+                        {s.docentes_asignados}
+                      </span>
+                    </td>
+                    <td className="p-3 sm:p-4 font-mono whitespace-nowrap">{s.anio_escolar}</td>
+                    <td className="p-3 sm:p-4 text-center whitespace-nowrap">
+                      <span className="px-3 py-1 bg-blue-100 text-blue-800 font-bold rounded-full text-xs">
+                        {s.total_estudiantes || 0} estudiantes
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

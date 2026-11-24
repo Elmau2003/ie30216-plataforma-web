@@ -23,7 +23,7 @@ export default function AsistenciaPage() {
 
   const mesesNombres = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre',
   ];
 
   const validarFinDeSemana = (fechaStr) => {
@@ -45,7 +45,6 @@ export default function AsistenciaPage() {
     const cargarSalonesSegunRol = async () => {
       try {
         if (usuario.rol === 'DOCENTE') {
-          // El docente auto-detecta su salón asignado del año actual
           const data = await fetchAPI(`/classrooms/mi-salon-asignado?anio=${anioReporte}`);
           if (data.asignado) {
             setSalones([data.salon]);
@@ -54,7 +53,6 @@ export default function AsistenciaPage() {
             setMensaje({ tipo: 'error', texto: 'No tiene un salón asignado para este año escolar.' });
           }
         } else {
-          // Directivos y Administrativos listan salones del año seleccionado
           const data = await fetchAPI(`/classrooms?anio=${anioReporte}`);
           setSalones(data);
           if (data.length > 0) setSalonSeleccionado(data[0].id.toString());
@@ -117,7 +115,7 @@ export default function AsistenciaPage() {
     setMensaje({ tipo: '', texto: '' });
 
     const payloadAsistencias = Object.entries(asistenciasMap).map(([estudianteId, estado]) => ({
-      estudianteId: parseInt(estudianteId),
+      estudianteId: parseInt(estudianteId, 10),
       estado,
     }));
 
@@ -125,7 +123,7 @@ export default function AsistenciaPage() {
       await fetchAPI('/attendance/registrar', {
         method: 'POST',
         body: JSON.stringify({
-          salonId: parseInt(salonSeleccionado),
+          salonId: parseInt(salonSeleccionado, 10),
           fecha,
           asistencias: payloadAsistencias,
         }),
@@ -219,12 +217,12 @@ export default function AsistenciaPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <h2 className="text-xl font-bold text-slate-800">Control Diario de Asistencia</h2>
 
       {mensaje.texto && (
         <div
-          className={`p-4 border-l-4 text-sm rounded ${
+          className={`p-4 border-l-4 text-sm rounded break-words ${
             mensaje.tipo === 'exito'
               ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
               : 'bg-red-50 border-red-500 text-red-700'
@@ -235,18 +233,18 @@ export default function AsistenciaPage() {
       )}
 
       {/* Tarjetas de Selección y Reporte */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-w-0">
         {/* Filtro para Registro Diario */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
+        <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs space-y-3 min-w-0">
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fecha de Registro</h3>
-          <div className="flex gap-3 items-end">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-end min-w-0">
+            <div className="flex-1 min-w-0">
               <label className="block text-xs font-medium text-slate-600 mb-1">Salón</label>
               <select
                 value={salonSeleccionado}
                 onChange={(e) => setSalonSeleccionado(e.target.value)}
                 disabled={usuario?.rol === 'DOCENTE'}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm disabled:bg-slate-100 font-medium"
+                className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm disabled:bg-slate-100 font-medium bg-white"
               >
                 {salones.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -255,13 +253,13 @@ export default function AsistenciaPage() {
                 ))}
               </select>
             </div>
-            <div className="w-44">
+            <div className="w-full sm:w-44 min-w-0">
               <label className="block text-xs font-medium text-slate-600 mb-1">Fecha</label>
               <input
                 type="date"
                 value={fecha}
                 onChange={handleFechaChange}
-                className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                className={`w-full min-w-0 px-3 py-2 border rounded-lg text-sm ${
                   esFinDeSemana ? 'border-red-400 bg-red-50 text-red-700' : 'border-slate-300'
                 }`}
               />
@@ -270,35 +268,39 @@ export default function AsistenciaPage() {
         </div>
 
         {/* Exportador Mensual a Excel */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
-          <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Exportar Reporte Mensual (.xlsx)</h3>
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
+        <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs space-y-3 min-w-0">
+          <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
+            Exportar Reporte Mensual (.xlsx)
+          </h3>
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-end min-w-0">
+            <div className="flex-1 min-w-0">
               <label className="block text-xs font-medium text-slate-600 mb-1">Mes</label>
               <select
                 value={mesReporte}
-                onChange={(e) => setMesReporte(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                onChange={(e) => setMesReporte(parseInt(e.target.value, 10))}
+                className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
               >
                 {mesesNombres.map((m, idx) => (
-                  <option key={idx + 1} value={idx + 1}>{m}</option>
+                  <option key={idx + 1} value={idx + 1}>
+                    {m}
+                  </option>
                 ))}
               </select>
             </div>
-            <div className="w-28">
+            <div className="w-full sm:w-28 min-w-0">
               <label className="block text-xs font-medium text-slate-600 mb-1">Año</label>
               <input
                 type="number"
                 value={anioReporte}
-                onChange={(e) => setAnioReporte(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                onChange={(e) => setAnioReporte(parseInt(e.target.value, 10))}
+                className="w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm"
               />
             </div>
             <button
               type="button"
               onClick={handleExportarReporteMensual}
               disabled={exportando || !salonSeleccionado}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg text-sm shadow-xs transition disabled:opacity-50"
+              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg text-sm shadow-xs transition disabled:opacity-50 cursor-pointer whitespace-nowrap shrink-0"
             >
               {exportando ? 'Generando...' : 'Descargar Excel'}
             </button>
@@ -307,62 +309,86 @@ export default function AsistenciaPage() {
       </div>
 
       {/* Tabla de Asistencia Diaria */}
-      <form onSubmit={handleGuardar} className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-        <table className="w-full text-left text-sm text-slate-600">
-          <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-            <tr>
-              <th className="p-4 w-12">N°</th>
-              <th className="p-4">DNI</th>
-              <th className="p-4">Apellidos y Nombres</th>
-              <th className="p-4 text-center">Estado de Asistencia</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {cargando ? (
-              <tr><td colSpan={4} className="p-4 text-center text-slate-400">Cargando datos...</td></tr>
-            ) : esFinDeSemana ? (
-              <tr><td colSpan={4} className="p-6 text-center text-red-500 font-medium">No se registran asistencias sábados ni domingos.</td></tr>
-            ) : estudiantes.length === 0 ? (
-              <tr><td colSpan={4} className="p-4 text-center text-slate-400">No hay estudiantes en este salón.</td></tr>
-            ) : (
-              estudiantes.map((est, index) => (
-                <tr key={est.estudiante_id} className="hover:bg-slate-50">
-                  <td className="p-4 font-mono text-xs text-slate-400">{index + 1}</td>
-                  <td className="p-4 font-mono text-xs">{est.dni}</td>
-                  <td className="p-4 font-medium text-slate-800">{est.apellidos}, {est.nombres}</td>
-                  <td className="p-4 text-center">
-                    <div className="inline-flex gap-2">
-                      {['PRESENTE', 'FALTA', 'TARDANZA', 'JUSTIFICADO'].map((estOp) => (
-                        <button
-                          key={estOp}
-                          type="button"
-                          onClick={() => handleEstadoChange(est.estudiante_id, estOp)}
-                          className={`px-3 py-1 rounded-md text-xs font-bold transition ${
-                            asistenciasMap[est.estudiante_id] === estOp
-                              ? estOp === 'PRESENTE' ? 'bg-emerald-600 text-white shadow-xs'
-                              : estOp === 'FALTA' ? 'bg-red-600 text-white shadow-xs'
-                              : estOp === 'TARDANZA' ? 'bg-amber-500 text-white shadow-xs'
-                              : 'bg-blue-600 text-white shadow-xs'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                          }`}
-                        >
-                          {estOp}
-                        </button>
-                      ))}
-                    </div>
+      <form
+        onSubmit={handleGuardar}
+        className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden min-w-0"
+      >
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600 min-w-[680px]">
+            <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+              <tr>
+                <th className="p-3 sm:p-4 w-12 whitespace-nowrap">N°</th>
+                <th className="p-3 sm:p-4 whitespace-nowrap">DNI</th>
+                <th className="p-3 sm:p-4 whitespace-nowrap">Apellidos y Nombres</th>
+                <th className="p-3 sm:p-4 text-center whitespace-nowrap">Estado de Asistencia</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {cargando ? (
+                <tr>
+                  <td colSpan={4} className="p-4 text-center text-slate-400">
+                    Cargando datos...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : esFinDeSemana ? (
+                <tr>
+                  <td colSpan={4} className="p-6 text-center text-red-500 font-medium">
+                    No se registran asistencias sábados ni domingos.
+                  </td>
+                </tr>
+              ) : estudiantes.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="p-4 text-center text-slate-400">
+                    No hay estudiantes en este salón.
+                  </td>
+                </tr>
+              ) : (
+                estudiantes.map((est, index) => (
+                  <tr key={est.estudiante_id} className="hover:bg-slate-50">
+                    <td className="p-3 sm:p-4 font-mono text-xs text-slate-400 whitespace-nowrap">
+                      {index + 1}
+                    </td>
+                    <td className="p-3 sm:p-4 font-mono text-xs whitespace-nowrap">{est.dni}</td>
+                    <td className="p-3 sm:p-4 font-medium text-slate-800 whitespace-nowrap">
+                      {est.apellidos}, {est.nombres}
+                    </td>
+                    <td className="p-3 sm:p-4 text-center whitespace-nowrap">
+                      <div className="inline-flex gap-1.5 sm:gap-2">
+                        {['PRESENTE', 'FALTA', 'TARDANZA', 'JUSTIFICADO'].map((estOp) => (
+                          <button
+                            key={estOp}
+                            type="button"
+                            onClick={() => handleEstadoChange(est.estudiante_id, estOp)}
+                            className={`px-2.5 sm:px-3 py-1 rounded-md text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                              asistenciasMap[est.estudiante_id] === estOp
+                                ? estOp === 'PRESENTE'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : estOp === 'FALTA'
+                                  ? 'bg-red-600 text-white shadow-xs'
+                                  : estOp === 'TARDANZA'
+                                  ? 'bg-amber-500 text-white shadow-xs'
+                                  : 'bg-blue-600 text-white shadow-xs'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            {estOp}
+                          </button>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {estudiantes.length > 0 && !esFinDeSemana && (
           <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
             <button
               type="submit"
               disabled={guardando}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg text-sm shadow-xs transition disabled:opacity-50"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg text-sm shadow-xs transition disabled:opacity-50 cursor-pointer"
             >
               {guardando ? 'Guardando...' : 'Guardar Asistencia'}
             </button>
