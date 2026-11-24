@@ -19,6 +19,9 @@ import EstudianteIncidenciasPage from './pages/EstudianteIncidenciasPage';
 import AdminMesaPartesPage from './pages/AdminMesaPartesPage';
 import AdminConsultasPage from './pages/AdminConsultasPage';
 
+const TITULO_LANDING = 'I.E. N.° 30216 "Sagrado Corazón de María"';
+const TITULO_INTRANET = 'Intranet';
+
 const TABS_POR_ROL = {
   DIRECTIVO: [
     'dashboard',
@@ -180,6 +183,12 @@ function MainLayout() {
   const { usuario, logout, cargando } = useAuth();
   const [tabActiva, setTabActiva] = useState('dashboard');
   const [enIntranet, setEnIntranet] = useState(() => esRutaIntranet(window.location.hash));
+
+  const estaEnLanding = !usuario && !enIntranet;
+
+  useEffect(() => {
+    document.title = estaEnLanding ? TITULO_LANDING : TITULO_INTRANET;
+  }, [estaEnLanding]);
 
   useEffect(() => {
     const manejarCambioHash = () => {

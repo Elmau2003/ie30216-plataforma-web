@@ -214,6 +214,24 @@ const NAV_ITEMS = [
   { id: 'contacto', label: 'Contacto' },
 ];
 
+// Componente auxiliar dentro de frontend/src/pages/LandingPage.jsx
+function LogoInstitucional({ className = 'w-10 h-10', fallbackClassName = 'w-5 h-5' }) {
+  const [logoDisponible, setLogoDisponible] = useState(true);
+
+  if (!logoDisponible) {
+    return <BuildingLibraryIcon className={fallbackClassName} />;
+  }
+
+  return (
+    <img
+      src="/images/institucion/logo.png"
+      alt='Logo I.E. N.° 30216 "Sagrado Corazón de María"'
+      onError={() => setLogoDisponible(false)}
+      className={`${className} object-contain`}
+    />
+  );
+}
+
 export default function LandingPage({ onAccederIntranet }) {
   const [slideActivo, setSlideActivo] = useState(0);
   const [valorSeleccionado, setValorSeleccionado] = useState('ambiental');
@@ -266,16 +284,16 @@ export default function LandingPage({ onAccederIntranet }) {
           }`}
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-950 to-blue-600 flex items-center justify-center text-white shadow-md shrink-0">
-              <BuildingLibraryIcon className="w-5 h-5" />
+            <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-md border border-slate-200/80 shrink-0 overflow-hidden p-1">
+                <LogoInstitucional className="w-full h-full" fallbackClassName="w-5 h-5 text-blue-900" />
             </div>
             <div className="hidden sm:block truncate">
-              <p className="text-[10px] font-extrabold tracking-widest uppercase text-sky-600 leading-none">
+                <p className="text-[10px] font-extrabold tracking-widest uppercase text-sky-600 leading-none">
                 El Tambo • Huancayo • Cód. 0382135
-              </p>
-              <h1 className="text-sm font-black text-blue-950 leading-tight truncate">
+                </p>
+                <h1 className="text-sm font-black text-blue-950 leading-tight truncate">
                 I.E. N.° 30216 "Sagrado Corazón de María"
-              </h1>
+                </h1>
             </div>
           </div>
 
@@ -972,16 +990,16 @@ export default function LandingPage({ onAccederIntranet }) {
       <footer className="bg-slate-900 text-slate-400 py-12 border-t-4 border-sky-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
-              <BuildingLibraryIcon className="w-5 h-5 text-slate-300" />
+            <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center border border-slate-700 shrink-0 overflow-hidden p-1">
+                <LogoInstitucional className="w-full h-full" fallbackClassName="w-5 h-5 text-slate-800" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white">
+                <p className="text-sm font-bold text-white">
                 I.E. N.° 30216 "Sagrado Corazón de María"
-              </p>
-              <p className="text-xs mt-1">
+                </p>
+                <p className="text-xs mt-1">
                 Jr. Antonio Lobato N.° 799, El Tambo, Huancayo • Cód. 0382135 / Local 222968
-              </p>
+                </p>
             </div>
           </div>
           <div className="text-xs space-y-1 font-medium">
