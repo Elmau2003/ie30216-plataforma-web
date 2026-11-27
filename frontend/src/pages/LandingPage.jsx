@@ -214,7 +214,6 @@ const NAV_ITEMS = [
   { id: 'contacto', label: 'Contacto' },
 ];
 
-// Componente auxiliar dentro de frontend/src/pages/LandingPage.jsx
 function LogoInstitucional({ className = 'w-10 h-10', fallbackClassName = 'w-5 h-5' }) {
   const [logoDisponible, setLogoDisponible] = useState(true);
 
@@ -226,6 +225,8 @@ function LogoInstitucional({ className = 'w-10 h-10', fallbackClassName = 'w-5 h
     <img
       src="/images/institucion/logo.png"
       alt='Logo I.E. N.° 30216 "Sagrado Corazón de María"'
+      loading="eager"
+      decoding="async"
       onError={() => setLogoDisponible(false)}
       className={`${className} object-contain`}
     />
@@ -240,7 +241,16 @@ export default function LandingPage({ onAccederIntranet }) {
   const [modalGaleriaAbierto, setModalGaleriaAbierto] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setScrolled(window.scrollY > 50);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -277,23 +287,23 @@ export default function LandingPage({ onAccederIntranet }) {
       {/* NAVBAR FLOTANTE */}
       <div className="fixed top-0 left-0 w-full z-50 flex justify-center pt-4 px-4 pointer-events-none">
         <header
-          className={`pointer-events-auto flex items-center justify-between w-full max-w-6xl px-4 sm:px-6 py-3 rounded-full transition-all duration-500 ${
+          className={`pointer-events-auto flex items-center justify-between w-full max-w-6xl px-4 sm:px-6 py-3 rounded-full transition-shadow duration-300 ${
             scrolled
-              ? 'bg-white/85 backdrop-blur-xl shadow-lg border border-white/50 shadow-blue-900/5'
+              ? 'bg-white/95 sm:bg-white/85 sm:backdrop-blur-md shadow-lg border border-white/50 shadow-blue-900/5'
               : 'bg-white/95 shadow-md border border-slate-100'
           }`}
         >
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-md border border-slate-200/80 shrink-0 overflow-hidden p-1">
-                <LogoInstitucional className="w-full h-full" fallbackClassName="w-5 h-5 text-blue-900" />
+              <LogoInstitucional className="w-full h-full" fallbackClassName="w-5 h-5 text-blue-900" />
             </div>
             <div className="hidden sm:block truncate">
-                <p className="text-[10px] font-extrabold tracking-widest uppercase text-sky-600 leading-none">
+              <p className="text-[10px] font-extrabold tracking-widest uppercase text-sky-600 leading-none">
                 El Tambo • Huancayo • Cód. 0382135
-                </p>
-                <h1 className="text-sm font-black text-blue-950 leading-tight truncate">
+              </p>
+              <h1 className="text-sm font-black text-blue-950 leading-tight truncate">
                 I.E. N.° 30216 "Sagrado Corazón de María"
-                </h1>
+              </h1>
             </div>
           </div>
 
@@ -314,7 +324,7 @@ export default function LandingPage({ onAccederIntranet }) {
             <button
               type="button"
               onClick={onAccederIntranet}
-              className="group relative inline-flex items-center justify-center px-5 py-2.5 font-bold text-white transition-all duration-300 bg-blue-950 rounded-full hover:bg-blue-800 hover:shadow-lg hover:shadow-blue-900/30 overflow-hidden cursor-pointer"
+              className="group relative inline-flex items-center justify-center px-5 py-2.5 font-bold text-white transition-colors duration-200 bg-blue-950 rounded-full hover:bg-blue-800 hover:shadow-lg hover:shadow-blue-900/30 overflow-hidden cursor-pointer"
             >
               <span className="relative z-10 flex items-center gap-2 text-xs sm:text-sm">
                 Intranet
@@ -336,7 +346,7 @@ export default function LandingPage({ onAccederIntranet }) {
 
       {/* Menú Móvil Overlay */}
       <div
-        className={`fixed inset-0 z-40 bg-blue-950/95 backdrop-blur-md transition-opacity duration-300 lg:hidden flex flex-col justify-center items-center gap-7 ${
+        className={`fixed inset-0 z-40 bg-blue-950/95 transition-opacity duration-200 lg:hidden flex flex-col justify-center items-center gap-7 ${
           menuAbierto ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -358,7 +368,9 @@ export default function LandingPage({ onAccederIntranet }) {
           <img
             src="/images/institucion/hero.jpg"
             alt='I.E. N.° 30216 "Sagrado Corazón de María"'
-            className="w-full h-full object-cover opacity-30 mix-blend-overlay"
+            loading="eager"
+            decoding="async"
+            className="w-full h-full object-cover opacity-25"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
               e.currentTarget.parentElement.classList.add(
@@ -369,13 +381,13 @@ export default function LandingPage({ onAccederIntranet }) {
               );
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-blue-950 via-blue-950/65 to-transparent" />
-          <div className="absolute top-20 -left-20 w-96 h-96 bg-sky-500/20 blur-[100px] rounded-full mix-blend-screen" />
-          <div className="absolute bottom-20 -right-20 w-[30rem] h-[30rem] bg-blue-600/30 blur-[120px] rounded-full mix-blend-screen" />
+          <div className="absolute inset-0 bg-gradient-to-t from-blue-950 via-blue-950/70 to-transparent" />
+          <div className="hidden sm:block absolute top-20 -left-20 w-96 h-96 bg-sky-500/20 blur-[90px] rounded-full" />
+          <div className="hidden sm:block absolute bottom-20 -right-20 w-[30rem] h-[30rem] bg-blue-600/30 blur-[100px] rounded-full" />
         </div>
 
         <div className="relative z-10 max-w-5xl mx-auto px-4 text-center space-y-7">
-          <div className="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-sky-300 text-xs sm:text-sm font-semibold tracking-wide">
+          <div className="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-sky-300 text-xs sm:text-sm font-semibold tracking-wide">
             <SparklesSolid className="w-4 h-4 text-sky-400" />
             <span>Educación Primaria • El Tambo, Huancayo • Local 222968</span>
           </div>
@@ -392,28 +404,28 @@ export default function LandingPage({ onAccederIntranet }) {
 
           {/* Comunidad Educativa */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto pt-2 text-left">
-            <div className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 px-4 py-3">
+            <div className="rounded-2xl bg-white/10 border border-white/15 px-4 py-3">
               <div className="flex items-center justify-between text-sky-300 text-xs font-bold uppercase">
                 <span>Estudiantes</span>
                 <UserGroupIcon className="w-4 h-4" />
               </div>
               <p className="text-2xl font-black text-white mt-1">536</p>
             </div>
-            <div className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 px-4 py-3">
+            <div className="rounded-2xl bg-white/10 border border-white/15 px-4 py-3">
               <div className="flex items-center justify-between text-sky-300 text-xs font-bold uppercase">
                 <span>Docentes</span>
                 <AcademicCapIcon className="w-4 h-4" />
               </div>
               <p className="text-2xl font-black text-white mt-1">33</p>
             </div>
-            <div className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 px-4 py-3">
+            <div className="rounded-2xl bg-white/10 border border-white/15 px-4 py-3">
               <div className="flex items-center justify-between text-sky-300 text-xs font-bold uppercase">
                 <span>Directivos</span>
                 <ShieldCheckIcon className="w-4 h-4" />
               </div>
               <p className="text-2xl font-black text-white mt-1">3</p>
             </div>
-            <div className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 px-4 py-3">
+            <div className="rounded-2xl bg-white/10 border border-white/15 px-4 py-3">
               <div className="flex items-center justify-between text-sky-300 text-xs font-bold uppercase">
                 <span>Administrativos</span>
                 <ClipboardDocumentCheckIcon className="w-4 h-4" />
@@ -426,14 +438,14 @@ export default function LandingPage({ onAccederIntranet }) {
             <button
               type="button"
               onClick={(e) => irASeccion(e, 'nosotros')}
-              className="w-full sm:w-auto px-8 py-4 rounded-full bg-sky-400 hover:bg-sky-300 text-blue-950 font-extrabold transition-all hover:scale-105 shadow-[0_0_40px_rgba(56,189,248,0.3)] cursor-pointer"
+              className="w-full sm:w-auto px-8 py-4 rounded-full bg-sky-400 hover:bg-sky-300 text-blue-950 font-extrabold transition-colors shadow-[0_0_40px_rgba(56,189,248,0.3)] cursor-pointer"
             >
               Descubre nuestra escuela
             </button>
             <button
               type="button"
               onClick={() => setModalGaleriaAbierto(true)}
-              className="w-full sm:w-auto group px-8 py-4 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto group px-8 py-4 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <PhotoIcon className="w-5 h-5 text-sky-300" />
               <span>Ver galería</span>
@@ -445,7 +457,7 @@ export default function LandingPage({ onAccederIntranet }) {
       {/* WIDGETS FLOTANTES SOBRE EL BORDE DEL HERO */}
       <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-slate-100 flex items-start gap-5 group hover:-translate-y-2 transition-transform duration-300">
+          <div className="bg-white rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-slate-100 flex items-start gap-5 group transition-transform duration-300">
             <div className="w-14 h-14 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 group-hover:bg-sky-500 group-hover:text-white transition-colors">
               <TrophySolid className="w-7 h-7" />
             </div>
@@ -458,7 +470,7 @@ export default function LandingPage({ onAccederIntranet }) {
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-slate-100 flex items-start gap-5 group hover:-translate-y-2 transition-transform duration-300">
+          <div className="bg-white rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-slate-100 flex items-start gap-5 group transition-transform duration-300">
             <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
               <AcademicCapSolid className="w-7 h-7" />
             </div>
@@ -471,7 +483,7 @@ export default function LandingPage({ onAccederIntranet }) {
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-slate-100 flex items-start gap-5 group hover:-translate-y-2 transition-transform duration-300">
+          <div className="bg-white rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-slate-100 flex items-start gap-5 group transition-transform duration-300">
             <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
               <SparklesSolid className="w-7 h-7" />
             </div>
@@ -487,22 +499,30 @@ export default function LandingPage({ onAccederIntranet }) {
       </div>
 
       {/* SECCIÓN NOSOTROS (COLLAGE EDITORIAL Y ASIMÉTRICO) */}
-      <section id="nosotros" className="py-24 sm:py-32 relative">
+      <section
+        id="nosotros"
+        style={{ contentVisibility: 'auto', containIntrinsicSize: '0 780px' }}
+        className="py-24 sm:py-32 relative"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="relative h-[500px] lg:h-[600px] w-full">
             <div className="absolute top-0 left-0 w-3/4 h-3/4 rounded-[2rem] overflow-hidden shadow-2xl z-10 border-4 border-white">
               <img
                 src="/images/institucion/fachada.jpg"
                 alt="Institución"
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
                 onError={ocultarSiNoExiste}
               />
-              <div className="absolute inset-0 bg-blue-950/10 mix-blend-multiply" />
+              <div className="absolute inset-0 bg-blue-950/10" />
             </div>
-            <div className="absolute bottom-0 right-0 w-3/5 h-2/5 rounded-[2rem] overflow-hidden shadow-2xl z-20 border-4 border-white translate-x-4 translate-y-4 hover:scale-105 transition-transform duration-500">
+            <div className="absolute bottom-0 right-0 w-3/5 h-2/5 rounded-[2rem] overflow-hidden shadow-2xl z-20 border-4 border-white translate-x-4 translate-y-4 transition-transform duration-500">
               <img
                 src="/images/institucion/aulas.jpg"
                 alt="Aulas"
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
                 onError={ocultarSiNoExiste}
               />
@@ -513,7 +533,7 @@ export default function LandingPage({ onAccederIntranet }) {
                 Horizonte
               </span>
             </div>
-            <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-sky-400/20 to-transparent blur-xl z-0" />
+            <div className="hidden sm:block absolute -bottom-8 -left-8 w-40 h-40 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-sky-400/20 to-transparent blur-xl z-0" />
           </div>
 
           <div className="space-y-7">
@@ -571,7 +591,10 @@ export default function LandingPage({ onAccederIntranet }) {
       </section>
 
       {/* BANNER INTERACTIVO DE VALORES */}
-      <section className="bg-gradient-to-r from-blue-950 via-blue-900 to-blue-950 py-14 relative overflow-hidden">
+      <section
+        style={{ contentVisibility: 'auto', containIntrinsicSize: '0 240px' }}
+        className="bg-gradient-to-r from-blue-950 via-blue-900 to-blue-950 py-14 relative overflow-hidden"
+      >
         <div
           className="absolute inset-0 opacity-10"
           style={{
@@ -589,9 +612,9 @@ export default function LandingPage({ onAccederIntranet }) {
                   key={val.id}
                   type="button"
                   onClick={() => setValorSeleccionado(val.id)}
-                  className={`inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider transition-colors cursor-pointer ${
                     activa
-                      ? 'bg-sky-400 text-blue-950 shadow-lg scale-105'
+                      ? 'bg-sky-400 text-blue-950 shadow-lg'
                       : 'bg-white/10 text-white/85 hover:bg-white/15 hover:text-sky-300 border border-white/15'
                   }`}
                 >
@@ -602,7 +625,7 @@ export default function LandingPage({ onAccederIntranet }) {
             })}
           </div>
 
-          <div className="max-w-3xl mx-auto rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 px-6 py-4 text-center text-blue-100 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="max-w-3xl mx-auto rounded-2xl bg-white/10 border border-white/15 px-6 py-4 text-center text-blue-100 flex flex-col sm:flex-row items-center justify-center gap-3">
             <IconoValorActivo className="w-5 h-5 text-sky-300 shrink-0" />
             <p className="text-sm">
               <strong className="text-white">{valorActivo.nombre}:</strong> {valorActivo.resumen}
@@ -612,7 +635,11 @@ export default function LandingPage({ onAccederIntranet }) {
       </section>
 
       {/* CARRUSEL INMERSIVO + GRID EXTRA DE FOTOS */}
-      <section id="vida-escolar" className="py-24 bg-white relative">
+      <section
+        id="vida-escolar"
+        style={{ contentVisibility: 'auto', containIntrinsicSize: '0 1100px' }}
+        className="py-24 bg-white relative"
+      >
         <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="text-center max-w-2xl mx-auto space-y-3">
             <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
@@ -628,13 +655,15 @@ export default function LandingPage({ onAccederIntranet }) {
               key={fotoActual.archivo}
               src={fotoActual.src}
               alt={fotoActual.titulo}
+              loading="lazy"
+              decoding="async"
               onError={ocultarSiNoExiste}
-              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out opacity-70 group-hover:scale-105 group-hover:opacity-60"
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out opacity-70"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-blue-950 via-blue-950/45 to-transparent" />
 
             <div className="relative z-10 bottom-0 left-0 w-full px-6 sm:px-12 md:px-20 pb-10 sm:pb-14 mt-auto text-left">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/90 text-white text-xs font-bold uppercase tracking-wider mb-4 backdrop-blur-md">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/90 text-white text-xs font-bold uppercase tracking-wider mb-4">
                 <CurrentIcon className="w-4 h-4" />
                 <span>{fotoActual.badge}</span>
               </div>
@@ -652,7 +681,7 @@ export default function LandingPage({ onAccederIntranet }) {
                 setSlideActivo((prev) => (prev === 0 ? FOTOS_INSTITUCION.length - 1 : prev - 1))
               }
               aria-label="Foto anterior"
-              className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 backdrop-blur-lg border border-white/30 text-white flex items-center justify-center hover:bg-white hover:text-blue-950 transition-colors z-20 cursor-pointer"
+              className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 border border-white/30 text-white flex items-center justify-center hover:bg-white hover:text-blue-950 transition-colors z-20 cursor-pointer"
             >
               <ChevronLeftIcon className="w-6 h-6" />
             </button>
@@ -662,7 +691,7 @@ export default function LandingPage({ onAccederIntranet }) {
                 setSlideActivo((prev) => (prev === FOTOS_INSTITUCION.length - 1 ? 0 : prev + 1))
               }
               aria-label="Siguiente foto"
-              className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 backdrop-blur-lg border border-white/30 text-white flex items-center justify-center hover:bg-white hover:text-blue-950 transition-colors z-20 cursor-pointer"
+              className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 border border-white/30 text-white flex items-center justify-center hover:bg-white hover:text-blue-950 transition-colors z-20 cursor-pointer"
             >
               <ChevronRightIcon className="w-6 h-6" />
             </button>
@@ -677,12 +706,14 @@ export default function LandingPage({ onAccederIntranet }) {
                 onClick={() => setSlideActivo(idx)}
                 className={`relative h-16 w-32 sm:w-40 rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer ${
                   idx === slideActivo
-                    ? 'ring-4 ring-sky-400 scale-105 shadow-lg'
+                    ? 'ring-4 ring-sky-400 shadow-lg'
                     : 'opacity-65 hover:opacity-100'
                 }`}
               >
                 <img
                   src={item.src}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                   alt={item.titulo}
                   onError={ocultarSiNoExiste}
@@ -713,8 +744,10 @@ export default function LandingPage({ onAccederIntranet }) {
                     <img
                       src={item.src}
                       alt={item.titulo}
+                      loading="lazy"
+                      decoding="async"
                       onError={ocultarSiNoExiste}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500"
                     />
                   </div>
                   <div className="p-5 space-y-1.5">
@@ -733,8 +766,12 @@ export default function LandingPage({ onAccederIntranet }) {
       </section>
 
       {/* PROPUESTA PEDAGÓGICA (TARJETAS ESCALONADAS POR CICLOS) */}
-      <section id="pedagogia" className="py-24 bg-slate-50 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-sky-100/50 rounded-full blur-[100px] -z-10 translate-x-1/2 -translate-y-1/4" />
+      <section
+        id="pedagogia"
+        style={{ contentVisibility: 'auto', containIntrinsicSize: '0 640px' }}
+        className="py-24 bg-slate-50 relative overflow-hidden"
+      >
+        <div className="hidden sm:block absolute top-0 right-0 w-[40rem] h-[40rem] bg-sky-100/50 rounded-full blur-[90px] -z-10 translate-x-1/2 -translate-y-1/4" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-16 md:flex md:items-end md:justify-between gap-8">
@@ -756,10 +793,10 @@ export default function LandingPage({ onAccederIntranet }) {
             {CICLOS_PEDAGOGICOS.map((ciclo) => (
               <div
                 key={ciclo.id}
-                className="group relative bg-white rounded-[2rem] p-8 shadow-sm border border-slate-200/60 hover:shadow-2xl hover:shadow-blue-900/10 transition-all duration-500 hover:-translate-y-2 overflow-hidden flex flex-col h-full"
+                className="group relative bg-white rounded-[2rem] p-8 shadow-sm border border-slate-200/60 hover:shadow-2xl hover:shadow-blue-900/10 transition-all duration-300 overflow-hidden flex flex-col h-full"
               >
                 <div
-                  className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${ciclo.color} opacity-10 rounded-bl-[100px] transition-all group-hover:scale-150 group-hover:opacity-20`}
+                  className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${ciclo.color} opacity-10 rounded-bl-[100px] transition-opacity group-hover:opacity-20`}
                 />
 
                 <div
@@ -802,7 +839,11 @@ export default function LandingPage({ onAccederIntranet }) {
       </section>
 
       {/* GESTIÓN ESCOLAR Y PARTICIPACIÓN */}
-      <section id="gestion" className="py-20 bg-white border-t border-slate-100">
+      <section
+        id="gestion"
+        style={{ contentVisibility: 'auto', containIntrinsicSize: '0 460px' }}
+        className="py-20 bg-white border-t border-slate-100"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div className="max-w-2xl space-y-2">
@@ -854,11 +895,15 @@ export default function LandingPage({ onAccederIntranet }) {
       </section>
 
       {/* BANNER DE CONTACTO Y ACCESO (DISEÑO SPLIT) */}
-      <section id="contacto" className="py-24 bg-slate-50 relative">
+      <section
+        id="contacto"
+        style={{ contentVisibility: 'auto', containIntrinsicSize: '0 540px' }}
+        className="py-24 bg-slate-50 relative"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-blue-950 rounded-[3rem] overflow-hidden flex flex-col lg:flex-row shadow-2xl">
             <div className="w-full lg:w-5/12 bg-gradient-to-br from-blue-900 to-blue-950 p-10 sm:p-14 flex flex-col justify-center text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500/20 blur-[80px] rounded-full" />
+              <div className="hidden sm:block absolute top-0 right-0 w-64 h-64 bg-sky-500/20 blur-[80px] rounded-full" />
               <h3 className="text-3xl sm:text-4xl font-black mb-8 relative z-10">
                 Las puertas están abiertas
               </h3>
@@ -920,7 +965,7 @@ export default function LandingPage({ onAccederIntranet }) {
                 <button
                   type="button"
                   onClick={onAccederIntranet}
-                  className="mt-4 w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-blue-950 hover:bg-blue-900 text-white font-extrabold px-8 py-4 rounded-full transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 cursor-pointer"
+                  className="mt-4 w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-blue-950 hover:bg-blue-900 text-white font-extrabold px-8 py-4 rounded-full transition-colors shadow-xl hover:shadow-2xl cursor-pointer"
                 >
                   <ShieldCheckSolid className="w-5 h-5" />
                   <span>Iniciar Sesión Segura</span>
@@ -933,7 +978,7 @@ export default function LandingPage({ onAccederIntranet }) {
 
       {/* MODAL DE GALERÍA */}
       {modalGaleriaAbierto && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
@@ -971,6 +1016,8 @@ export default function LandingPage({ onAccederIntranet }) {
                     <img
                       src={foto.src}
                       alt={foto.titulo}
+                      loading="lazy"
+                      decoding="async"
                       onError={ocultarSiNoExiste}
                       className="absolute inset-0 w-full h-full object-cover"
                     />
@@ -987,19 +1034,22 @@ export default function LandingPage({ onAccederIntranet }) {
       )}
 
       {/* FOOTER */}
-      <footer className="bg-slate-900 text-slate-400 py-12 border-t-4 border-sky-500">
+      <footer
+        style={{ contentVisibility: 'auto', containIntrinsicSize: '0 140px' }}
+        className="bg-slate-900 text-slate-400 py-12 border-t-4 border-sky-500"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center border border-slate-700 shrink-0 overflow-hidden p-1">
-                <LogoInstitucional className="w-full h-full" fallbackClassName="w-5 h-5 text-slate-800" />
+              <LogoInstitucional className="w-full h-full" fallbackClassName="w-5 h-5 text-slate-800" />
             </div>
             <div>
-                <p className="text-sm font-bold text-white">
+              <p className="text-sm font-bold text-white">
                 I.E. N.° 30216 "Sagrado Corazón de María"
-                </p>
-                <p className="text-xs mt-1">
+              </p>
+              <p className="text-xs mt-1">
                 Jr. Antonio Lobato N.° 799, El Tambo, Huancayo • Cód. 0382135 / Local 222968
-                </p>
+              </p>
             </div>
           </div>
           <div className="text-xs space-y-1 font-medium">
